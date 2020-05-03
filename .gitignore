@@ -1,0 +1,17 @@
+target
+.idea
+.classpath
+.project
+.settings
+.DS_Store
+*.iml
+*.ipr
+*.iws
+bin
+deploy
+deploy.log
+BLOB_STORE
+*.swp
+dev-local.properties
+generated-test.properties
+dependency-reduced-pom.xml

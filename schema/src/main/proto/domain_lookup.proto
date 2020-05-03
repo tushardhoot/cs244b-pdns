@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package edu.cs244b.common;
+
+option java_multiple_files = true;
+option java_package = "edu.cs244b.common";
+option java_outer_classname = "DomainLookupProtos";
+
+
+service DomainLookupService {
+    rpc GetDomain(HostName) returns (DNSRecord);
+}
+
+message HostName {
+    string name = 1;
+}
+
+message DNSRecord {
+    string hostName = 1;
+    repeated string ipAddresses = 2;
+}
