@@ -2,7 +2,9 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/cs244b.iml" filepath="$PROJECT_DIR$/cs244b.iml" />
+      <module fileurl="file://$PROJECT_DIR$/common/common.iml" filepath="$PROJECT_DIR$/common/common.iml" />
+      <module fileurl="file://$PROJECT_DIR$/grpc_server/grpc_server.iml" filepath="$PROJECT_DIR$/grpc_server/grpc_server.iml" />
+      <module fileurl="file://$PROJECT_DIR$/p2p_dns.iml" filepath="$PROJECT_DIR$/p2p_dns.iml" />
     </modules>
   </component>
 </project>
