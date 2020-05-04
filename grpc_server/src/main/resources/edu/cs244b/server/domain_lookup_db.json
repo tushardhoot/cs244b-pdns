@@ -17,5 +17,8 @@
   }, {
     "hostName": "walmart.com",
     "ipAddress": "6.6.6.6"
+  }, {
+    "hostName": "usa.gov",
+    "resource": "usgov"
   }]
 }
