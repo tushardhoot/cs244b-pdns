@@ -1,21 +1,21 @@
 package edu.cs244b.server;
 
-import edu.cs244b.common.CommonUtils;
 import edu.cs244b.common.DNSRecord;
 import edu.cs244b.common.DomainLookupServiceGrpc;
 import edu.cs244b.common.HostName;
 import edu.cs244b.common.NullOrEmpty;
+import edu.cs244b.mappings.JSONMappingStore;
+import edu.cs244b.mappings.LookupResult;
+import edu.cs244b.mappings.Manager;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
+import io.grpc.Status;
+import io.grpc.StatusException;
 import io.grpc.stub.StreamObserver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.net.URL;
-import java.util.Collection;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 
 
@@ -26,18 +26,18 @@ public class DomainLookupServer {
     private final Server server;
 
     public DomainLookupServer(int port) throws IOException {
-        this(port, ServerUtils.getDefaultLookupFile());
+        this(port, new JSONMappingStore(ServerUtils.getDefaultLookupFile()));
     }
 
     /** Create a DomainLookup server listening on {@code port} using {@code lookupFile} database. */
-    public DomainLookupServer(int port, URL lookupFile) throws IOException {
-        this(ServerBuilder.forPort(port), port, ServerUtils.parseDomainMappings(lookupFile));
+    public DomainLookupServer(int port, Manager.MappingStore mappingStore) {
+        this(ServerBuilder.forPort(port), port, mappingStore);
     }
 
     /** Create a DomainLookup server using serverBuilder as a base and lookup entries as data. */
-    public DomainLookupServer(ServerBuilder<?> serverBuilder, int port, Collection<DomainLookupMapping.Entry> lookupEntries) {
+    public DomainLookupServer(ServerBuilder<?> serverBuilder, int port, Manager.MappingStore mappingStore) {
         this.port = port;
-        server = serverBuilder.addService(new DomainLookupService(lookupEntries)).build();
+        server = serverBuilder.addService(new DomainLookupService(new Manager(mappingStore))).build();
     }
 
     /** Start serving requests. */
@@ -86,31 +86,41 @@ public class DomainLookupServer {
      * Implementation of DomainLookupService.
      * <p>See domain_lookup.proto for details of the methods.
      */
-    private static class DomainLookupService extends DomainLookupServiceGrpc.DomainLookupServiceImplBase {
-        private final ConcurrentMap<String, Integer> ipByHostName = new ConcurrentHashMap<String, Integer>();
+    static class DomainLookupService extends DomainLookupServiceGrpc.DomainLookupServiceImplBase {
+        private final Manager mappingManager;
 
-        DomainLookupService(final Collection<DomainLookupMapping.Entry> lookupEntries) {
-            for (final DomainLookupMapping.Entry entry : lookupEntries) {
-                ipByHostName.put(entry.getHostName(), CommonUtils.ipToInt(entry.getIpAddress()));
-            }
+        DomainLookupService(final Manager manager) {
+            mappingManager = manager;
         }
 
         @Override
         public void getDomain(final HostName hostName, StreamObserver<DNSRecord> responseObserver) {
-            responseObserver.onNext(resolveHostname(hostName));
+            if (NullOrEmpty.isTrue(hostName.getName())) {
+                responseObserver.onError(new StatusException(Status.INVALID_ARGUMENT));
+                return;
+            }
+
+            LookupResult lookupResult = mappingManager.lookupHostname(hostName.getName());
+            if (lookupResult == null) {
+                responseObserver.onError(new StatusException(Status.NOT_FOUND));
+                return;
+            }
+
+            if (lookupResult.getType() == LookupResult.MappingType.INDIRECT) {
+                // TODO: Support indirect resolution.
+                responseObserver.onError(new StatusException(Status.UNIMPLEMENTED));
+                return;
+            }
+
+            responseObserver.onNext(buildResponse(lookupResult));
             responseObserver.onCompleted();
         }
 
-        private DNSRecord resolveHostname(final HostName hostName) {
-            /* TODO:
-             * Get the best match mapping
-             * Resolve if it is pointing to some other trusted server
-             */
-            final DNSRecord.Builder builder = DNSRecord.newBuilder();
-            if (NullOrEmpty.isFalse(hostName.getName()) && ipByHostName.containsKey(hostName.getName())) {
-                builder.addIpAddresses(CommonUtils.intToIp(ipByHostName.get(hostName.getName())));
-            }
-            return builder.build();
+        private DNSRecord buildResponse(final LookupResult result) {
+            return DNSRecord.newBuilder()
+                    .setHostName(result.getHostname())
+                    .addIpAddresses(result.getValue())
+                    .build();
         }
 
     }

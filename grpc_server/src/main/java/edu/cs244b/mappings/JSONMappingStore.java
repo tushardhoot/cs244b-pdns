@@ -10,17 +10,18 @@ import java.io.InputStreamReader;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 public class JSONMappingStore implements Manager.MappingStore {
 
     private final URL path;
 
-    JSONMappingStore(URL path) {
+    public JSONMappingStore(URL path) {
         this.path = path;
     }
 
-    public List<LookupResult> loadMappings() {
+    public Set<LookupResult> loadMappings() {
         InputStream inputStream;
         try {
             inputStream = path.openStream();
@@ -32,7 +33,7 @@ public class JSONMappingStore implements Manager.MappingStore {
         Gson gson = new Gson();
         JSONMappings jsonMappings = gson.fromJson(reader, JSONMappings.class);
 
-        return jsonMappings.entries.stream().map(JSONMappingStore::validResultOrThrow).collect(Collectors.toList());
+        return jsonMappings.entries.stream().map(JSONMappingStore::validResultOrThrow).collect(Collectors.toSet());
     }
 
     private static LookupResult validResultOrThrow(Entry entry) {

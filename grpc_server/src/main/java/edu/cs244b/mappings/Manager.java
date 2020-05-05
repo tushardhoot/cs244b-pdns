@@ -6,11 +6,11 @@ import java.util.*;
 public class Manager {
     RecursiveMapping mappings;
 
-    interface MappingStore {
-        List<LookupResult> loadMappings();
+    public interface MappingStore {
+        Set<LookupResult> loadMappings();
     }
 
-    Manager(MappingStore store) {
+    public Manager(MappingStore store) {
         mappings = new RecursiveMapping();
         store.loadMappings().forEach(result -> mappings.pushMapping(CommonUtils.rDNSForm(result.hostname), result));
     }

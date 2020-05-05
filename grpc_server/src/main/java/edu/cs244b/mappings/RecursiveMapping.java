@@ -25,7 +25,7 @@ public class RecursiveMapping {
 
         String part = remainder.remove(0);
         if (remainder.isEmpty()) {
-            if (subMappings.containsKey(part)) {
+            if (subMappings.containsKey(part) && subMappings.get(part).defaultValue != null) {
                 throw new RuntimeException(String.format("Duplicate mappings for %s", part));
             }
 

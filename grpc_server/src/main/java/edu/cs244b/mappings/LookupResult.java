@@ -11,9 +11,21 @@ public class LookupResult {
     String hostname;
     String value;
 
-    LookupResult(MappingType type, String hostname, String value) {
+    public LookupResult(MappingType type, String hostname, String value) {
         this.type = type;
         this.hostname = hostname;
         this.value = value;
+    }
+
+    public MappingType getType() {
+        return type;
+    }
+
+    public String getHostname() {
+        return hostname;
+    }
+
+    public String getValue() {
+        return value;
     }
 }
