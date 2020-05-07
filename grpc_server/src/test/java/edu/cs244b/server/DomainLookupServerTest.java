@@ -20,9 +20,7 @@ import org.junit.runners.JUnit4;
 
 import io.grpc.testing.GrpcCleanupRule;
 
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashSet;
+import java.util.*;
 
 import static org.junit.Assert.assertEquals;
 
@@ -35,13 +33,13 @@ public class DomainLookupServerTest {
     @Rule
     public ExpectedException exceptionRule = ExpectedException.none();
 
-    String setupServer(Manager.MappingStore mappings) throws Exception {
+    String setupServer(Manager.MappingStore mappings, Map<String, Peer> peers) throws Exception {
         String serverName = InProcessServerBuilder.generateName();
 
         grpcCleanup.register(
                 InProcessServerBuilder.forName(serverName)
                         .directExecutor().addService(
-                        new DomainLookupService(new Manager(mappings))
+                        new DomainLookupService(new Manager(mappings), peers)
                 ).build().start()
         );
 
@@ -56,7 +54,10 @@ public class DomainLookupServerTest {
 
     @Test
     public void domainLookup_HostnameNotFound() throws Exception {
-        String serverName = setupServer(new ConstantsMappingStore(Collections.emptySet()));
+        String serverName = setupServer(
+                new ConstantsMappingStore(Collections.emptySet()),
+                Collections.emptyMap()
+        );
         DomainLookupServiceBlockingStub stub = setupClient(serverName);
 
         exceptionRule.expect(StatusRuntimeException.class);
@@ -67,16 +68,90 @@ public class DomainLookupServerTest {
 
     @Test
     public void domainLookup_DirectLookup() throws Exception {
-        HashSet<LookupResult> mappings = new HashSet<>(Arrays.asList(
+        Set<LookupResult> mappings = Collections.singleton(
                 new LookupResult(LookupResult.MappingType.DIRECT, "facebook.com", "1.2.3.4")
-        ));
+        );
 
-        String serverName = setupServer(new ConstantsMappingStore(mappings));
+        String serverName = setupServer(
+                new ConstantsMappingStore(mappings),
+                Collections.emptyMap()
+        );
         DomainLookupServiceBlockingStub stub = setupClient(serverName);
-
         DNSRecord reply = stub.getDomain(HostName.newBuilder().setName("facebook.com").build());
+
         assertEquals(1, reply.getIpAddressesCount());
         assertEquals("1.2.3.4", reply.getIpAddresses(0));
+    }
+
+    @Test
+    public void domainLookup_IndirectLookup() throws Exception {
+        // Setup peer.
+        Set<LookupResult> friendServerMappings = Collections.singleton(
+                new LookupResult(LookupResult.MappingType.DIRECT, "usa.gov", "1.2.3.4")
+        );
+        String friendServer = setupServer(new ConstantsMappingStore(friendServerMappings), Collections.emptyMap());
+
+        // Setup server.
+        Set<LookupResult> mappings = Collections.singleton(
+                new LookupResult(LookupResult.MappingType.INDIRECT, "usa.gov", "usgov")
+        );
+        Map<String, Peer> peers = Collections.singletonMap("usgov", new Peer("usgov", setupClient(friendServer)));
+        String serverName = setupServer(new ConstantsMappingStore(mappings), peers);
+
+        // Test indirect call.
+        DomainLookupServiceBlockingStub stub = setupClient(serverName);
+        DNSRecord reply = stub.getDomain(HostName.newBuilder().setName("usa.gov").build());
+
+        assertEquals(1, reply.getIpAddressesCount());
+        assertEquals("1.2.3.4", reply.getIpAddresses(0));
+    }
+
+    @Test
+    public void domainLookup_IndirectLookupHostnameNotFound() throws Exception {
+        // Setup peer.
+        Set<LookupResult> friendServerMappings = Collections.singleton(
+                new LookupResult(LookupResult.MappingType.DIRECT, "facebook.com", "1.2.3.4")
+        );
+        String friendServer = setupServer(new ConstantsMappingStore(friendServerMappings), Collections.emptyMap());
+
+        // Setup server.
+        Set<LookupResult> mappings = Collections.singleton(
+                new LookupResult(LookupResult.MappingType.INDIRECT, "usa.gov", "usgov")
+        );
+        Map<String, Peer> peers = Collections.singletonMap("usgov", new Peer("usgov", setupClient(friendServer)));
+        String serverName = setupServer(new ConstantsMappingStore(mappings), peers);
+
+        // Test indirect call.
+        DomainLookupServiceBlockingStub stub = setupClient(serverName);
+
+        exceptionRule.expect(StatusRuntimeException.class);
+        exceptionRule.expectMessage("NOT_FOUND");
+
+        stub.getDomain(HostName.newBuilder().setName("usa.gov").build());
+    }
+
+    @Test
+    public void domainLookup_IndirectLookupPeerNotFound() throws Exception {
+        // Setup peer.
+        Set<LookupResult> friendServerMappings = Collections.singleton(
+                new LookupResult(LookupResult.MappingType.DIRECT, "usa.gov", "1.2.3.4")
+        );
+        String friendServer = setupServer(new ConstantsMappingStore(friendServerMappings), Collections.emptyMap());
+
+        // Setup server.
+        Set<LookupResult> mappings = Collections.singleton(
+                new LookupResult(LookupResult.MappingType.INDIRECT, "usa.gov", "usgov")
+        );
+        Map<String, Peer> peers = Collections.singletonMap("differentpeer", new Peer("differentpeer", setupClient(friendServer)));
+        String serverName = setupServer(new ConstantsMappingStore(mappings), peers);
+
+        // Test indirect call.
+        DomainLookupServiceBlockingStub stub = setupClient(serverName);
+
+        exceptionRule.expect(StatusRuntimeException.class);
+        exceptionRule.expectMessage("INTERNAL");
+
+        stub.getDomain(HostName.newBuilder().setName("usa.gov").build());
     }
 
 }

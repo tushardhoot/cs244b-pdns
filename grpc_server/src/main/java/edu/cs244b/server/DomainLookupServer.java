@@ -7,15 +7,13 @@ import edu.cs244b.common.NullOrEmpty;
 import edu.cs244b.mappings.JSONMappingStore;
 import edu.cs244b.mappings.LookupResult;
 import edu.cs244b.mappings.Manager;
-import io.grpc.Server;
-import io.grpc.ServerBuilder;
-import io.grpc.Status;
-import io.grpc.StatusException;
+import io.grpc.*;
 import io.grpc.stub.StreamObserver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 
@@ -26,18 +24,31 @@ public class DomainLookupServer {
     private final Server server;
 
     public DomainLookupServer(int port) throws IOException {
-        this(port, new JSONMappingStore(ServerUtils.getDefaultLookupFile()));
+        this(
+                port,
+                new JSONMappingStore(ServerUtils.defaultJSONLookupDB()),
+                ServerUtils.loadPeers(ServerUtils.defaultPeerList())
+        );
     }
 
     /** Create a DomainLookup server listening on {@code port} using {@code lookupFile} database. */
-    public DomainLookupServer(int port, Manager.MappingStore mappingStore) {
-        this(ServerBuilder.forPort(port), port, mappingStore);
+    public DomainLookupServer(int port, Manager.MappingStore mappingStore, Map<String, Peer> peers) {
+        this(ServerBuilder.forPort(port), mappingStore, peers, port);
     }
 
     /** Create a DomainLookup server using serverBuilder as a base and lookup entries as data. */
-    public DomainLookupServer(ServerBuilder<?> serverBuilder, int port, Manager.MappingStore mappingStore) {
+    public DomainLookupServer(
+            ServerBuilder<?> serverBuilder,
+            Manager.MappingStore mappingStore,
+            Map<String, Peer> peers,
+            int port) {
         this.port = port;
-        server = serverBuilder.addService(new DomainLookupService(new Manager(mappingStore))).build();
+        server = serverBuilder.addService(
+                new DomainLookupService(
+                        new Manager(mappingStore),
+                        peers
+                )
+        ).build();
     }
 
     /** Start serving requests. */
@@ -76,8 +87,12 @@ public class DomainLookupServer {
     }
 
     public static void main(String[] args) throws Exception {
-        //TODO: Decide a port and make it a constant
-        DomainLookupServer server = new DomainLookupServer(8980);
+        int port = 8980;
+        if (args.length > 0 && NullOrEmpty.isFalse(args[0])) {
+            port = Integer.parseInt(args[0]);
+        }
+
+        DomainLookupServer server = new DomainLookupServer(port);
         server.start();
         server.blockUntilShutdown();
     }
@@ -88,9 +103,11 @@ public class DomainLookupServer {
      */
     static class DomainLookupService extends DomainLookupServiceGrpc.DomainLookupServiceImplBase {
         private final Manager mappingManager;
+        private final Map<String, Peer> peers;
 
-        DomainLookupService(final Manager manager) {
-            mappingManager = manager;
+        DomainLookupService(final Manager manager, Map<String, Peer> peers) {
+            this.mappingManager = manager;
+            this.peers = peers;
         }
 
         @Override
@@ -107,13 +124,34 @@ public class DomainLookupServer {
             }
 
             if (lookupResult.getType() == LookupResult.MappingType.INDIRECT) {
-                // TODO: Support indirect resolution.
-                responseObserver.onError(new StatusException(Status.UNIMPLEMENTED));
-                return;
-            }
+                String peerName = lookupResult.getValue();
+                if (!peers.containsKey(peerName)) {
+                    responseObserver.onError(new StatusException(Status.INTERNAL));
+                    return;
+                }
 
-            responseObserver.onNext(buildResponse(lookupResult));
-            responseObserver.onCompleted();
+                Peer peer = peers.get(peerName);
+
+                indirectResolution(responseObserver, lookupResult.getHostname(), peer);
+            } else {
+                responseObserver.onNext(buildResponse(lookupResult));
+                responseObserver.onCompleted();
+            }
+        }
+
+        private void indirectResolution(StreamObserver<DNSRecord> responseObserver, String key, Peer peer) {
+            try {
+                responseObserver.onNext(peer.getStub().getDomain(HostName.newBuilder().setName(key).build()));
+                responseObserver.onCompleted();
+            } catch (StatusRuntimeException sre) {
+                switch (sre.getStatus().getCode()) {
+                    case NOT_FOUND:
+                        responseObserver.onError(new StatusException(Status.NOT_FOUND));
+                        break;
+                    default:
+                        responseObserver.onError(new StatusException(Status.INTERNAL));
+                }
+            }
         }
 
         private DNSRecord buildResponse(final LookupResult result) {
