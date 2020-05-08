@@ -1,8 +1,8 @@
 import logging
-
 import grpc
 import domain_lookup_pb2
 import domain_lookup_pb2_grpc
+import functools
 
 logging.getLogger('').setLevel(logging.INFO)
 SERVER_IP = '127.0.0.1'
@@ -18,26 +18,71 @@ class DnsClient:
         # The channel used to communicate with the DNS server.
         # lazily create
         self.channel = None
+        # Tracks the various request
+        self.request_id = 0
+        # Stores mappings from request id -> futures object
+        # TODO(kbaichoo): likely have this hold a bit more metadata
+        # so it knows to respond to a particular DNS reuqest.
+        self.outstanding_request = dict()
 
     def request_dns_lookup(self, domain_name):
         """
         Makes an RPC call to our DNS Server.
 
         Args:
-         - domain_name: The name of the domain to lookup.
+         - domain_name: a string containing the name of the domain to lookup.
 
         Returns the resulting protobuf on success.
         """
         if not self.channel:
-            # TODO(kbaichoo): set up a secure channel + don't hardcode
+            # TODO(kbaichoo): set up a secure channel
             self.channel = grpc.insecure_channel(
                 '{}:{}'.format(self.server_ip, self.server_port))
+
+        # Get the request ID
+        request_id = self.request_id
+        self.request_id += 1
+
         stub = domain_lookup_pb2_grpc.DomainLookupServiceStub(self.channel)
         request = domain_lookup_pb2.HostName(name=domain_name)
-        return stub.GetDomain(request)
+        cb = functools.partial(process_dns_response, self, request_id)
+        future = stub.GetDomain.future(request)
+
+        logging.info('Sending Request[ID={}] for domain: {}'.format(
+            request_id, domain_name))
+        # Add outstanding request to the map
+        self.outstanding_request[request_id] = future
+        future.add_done_callback(cb)
+
+    def run_until_termination(self):
+        """
+        Set up a server for the browser to connect to,
+        and run until termination.
+        """
+        # TODO(kbaichoo): implement this to keep running unless we see
+        # an interrupt.
+        import time
+        time.sleep(100)
+
+
+# TODO(kbaichoo): use partialmethod and have this be a method in the object.
+# Currently a bit jank.
+def process_dns_response(self, request_id, msg):
+    """Handles the callback when the request is fulfilled."""
+    logging.info('Recieved response for Request[ID={}]'.format(request_id))
+    self.outstanding_request.pop(request_id)
+    if msg.code() == grpc.StatusCode.OK:
+        # Process the response, it was a success
+        result = msg.result()
+        pass
+
+    # Error in the response.
+    return None
 
 
 if __name__ == '__main__':
-    # Launch the DNS intercept server.
+    # Create the client object and test out some domains.
     client = DnsClient(None, SERVER_IP, SERVER_PORT)
     print(client.request_dns_lookup('walmart.com'))
+    print(client.request_dns_lookup('facebook.com'))
+    client.run_until_termination()
