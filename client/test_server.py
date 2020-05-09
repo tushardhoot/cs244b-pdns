@@ -1,3 +1,4 @@
+#! /usr/bin/env python3
 """
 Test Server in python supporting the rpc call (just to test changes)
 """
