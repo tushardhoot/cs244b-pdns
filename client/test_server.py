@@ -15,6 +15,7 @@ SERVER_PORT = 8980
 
 class DomainLookupServicer(domain_lookup_pb2_grpc.DomainLookupServiceServicer):
     def GetDomain(self, request, context):
+        logging.info('Received Request:{}'.format(request))
         record = domain_lookup_pb2.DNSRecord(
             hostName='test.com', ipAddresses=['0.0.0.0'])
         time.sleep(1)

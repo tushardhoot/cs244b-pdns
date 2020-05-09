@@ -40,8 +40,9 @@ class DNSRequestHandler(socketserver.BaseRequestHandler):
         try:
             #  TODO(kbaichoo): implement the handling of the DNS record /
             #  sending the correct records.
-            results = self.grpc_client.request_dns_lookup('walmart.com')
-            str_results = str(results.result())
+            dns_record_proto = self.grpc_client.request_dns_lookup(
+                'walmart.com')
+            str_results = str(dns_record_proto)
             print(str_results)
             self.send_data(str.encode(str_results))
         except Exception:
