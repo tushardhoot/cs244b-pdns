@@ -5,15 +5,10 @@ local system, and pass it to our backend.
 """
 import argparse
 import logging
-import grpc
-import domain_lookup_pb2
-import domain_lookup_pb2_grpc
-import functools
 import socketserver
-import threading
-import time
 import traceback
 import client
+import dnslib
 
 
 logging.getLogger('').setLevel(logging.INFO)
@@ -75,12 +70,14 @@ if __name__ == '__main__':
 
     # Arguments for the local DNS service
     parser.add_argument('--port', default=53, type=int,
-                        help='The port to listen on for the local UDP DNS Server.')
+                        help='The port to listen on for the local '
+                        'UDP DNS Server.')
     args = parser.parse_args()
 
     grpc_client = client.DnsClient(None, args.backend_ip, args.backend_port)
+    server_info = ('', args.port)
+
     # Launch the server.
-    # TODO(kbaichoo): use the client here to resolve this bit.
-    with LocalDNSServer(grpc_client, ('', args.port), DNSRequestHandler) as server:
+    with LocalDNSServer(grpc_client, server_info, DNSRequestHandler) as server:
         print('Serving...')
         server.serve_forever()

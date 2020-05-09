@@ -1,0 +1,2 @@
+grpcio-tools ~= 1.28
+dnslib == 0.9.*
