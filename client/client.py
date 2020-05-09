@@ -51,14 +51,17 @@ class DnsClient:
 
         stub = domain_lookup_pb2_grpc.DomainLookupServiceStub(self.channel)
         request = domain_lookup_pb2.HostName(name=domain_name)
-        cb = functools.partial(process_dns_response, self, request_id)
-        future = stub.GetDomain.future(request)
+        #cb = functools.partial(process_dns_response, self, request_id)
+        #future = stub.GetDomain.future(request)
 
         logging.info('Sending Request[ID={}] for domain: {}'.format(
             request_id, domain_name))
         # Add outstanding request to the map
+        return stub.GetDomain.future(request)
+        """
         self.outstanding_request[request_id] = future
         future.add_done_callback(cb)
+        """
 
     def run_until_termination(self):
         """
