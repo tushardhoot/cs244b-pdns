@@ -10,12 +10,12 @@ public class Manager {
         Set<LookupResult> loadMappings();
     }
 
-    public Manager(MappingStore store) {
+    public Manager(final MappingStore store) {
         mappings = new RecursiveMapping();
         store.loadMappings().forEach(result -> mappings.pushMapping(CommonUtils.rDNSForm(result.hostname), result));
     }
 
-    public LookupResult lookupHostname(String hostname) {
+    public LookupResult lookupHostname(final String hostname) {
         return mappings.lookup(CommonUtils.rDNSForm(hostname));
     }
 }

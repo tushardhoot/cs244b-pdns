@@ -3,7 +3,7 @@ package edu.cs244b.server;
 import edu.cs244b.common.DNSRecord;
 import edu.cs244b.common.DomainLookupServiceGrpc;
 import edu.cs244b.common.DomainLookupServiceGrpc.DomainLookupServiceBlockingStub;
-import edu.cs244b.common.HostName;
+import edu.cs244b.common.Message;
 import edu.cs244b.mappings.ConstantsMappingStore;
 import edu.cs244b.mappings.LookupResult;
 import edu.cs244b.mappings.Manager;
@@ -23,6 +23,7 @@ import io.grpc.testing.GrpcCleanupRule;
 import java.util.*;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 @RunWith(JUnit4.class)
 public class DomainLookupServerTest {
@@ -35,11 +36,26 @@ public class DomainLookupServerTest {
 
     String setupServer(Manager.MappingStore mappings, Map<String, Peer> peers) throws Exception {
         String serverName = InProcessServerBuilder.generateName();
-
+        final ServerOperationalConfig config = ServerOperationalConfig.newBuilder()
+                .setDnsExpiryDays(3).setMaxHopCount(2).build();
         grpcCleanup.register(
                 InProcessServerBuilder.forName(serverName)
                         .directExecutor().addService(
-                        new DomainLookupService(new Manager(mappings), peers)
+                        new DomainLookupService(new Manager(mappings), peers, config)
+                ).build().start()
+        );
+
+        return serverName;
+    }
+
+    String setupServer(final Manager.MappingStore mappings,
+                       final Map<String, Peer> peers,
+                       final ServerOperationalConfig config) throws Exception {
+        String serverName = InProcessServerBuilder.generateName();
+        grpcCleanup.register(
+                InProcessServerBuilder.forName(serverName)
+                        .directExecutor().addService(
+                        new DomainLookupService(new Manager(mappings), peers, config)
                 ).build().start()
         );
 
@@ -63,7 +79,7 @@ public class DomainLookupServerTest {
         exceptionRule.expect(StatusRuntimeException.class);
         exceptionRule.expectMessage("NOT_FOUND");
 
-        stub.getDomain(HostName.newBuilder().setName("facebook.com").build());
+        stub.getDomain(Message.newBuilder().setHostName("facebook.com").build());
     }
 
     @Test
@@ -77,7 +93,7 @@ public class DomainLookupServerTest {
                 Collections.emptyMap()
         );
         DomainLookupServiceBlockingStub stub = setupClient(serverName);
-        DNSRecord reply = stub.getDomain(HostName.newBuilder().setName("facebook.com").build());
+        DNSRecord reply = stub.getDomain(Message.newBuilder().setHostName("facebook.com").build());
 
         assertEquals(1, reply.getIpAddressesCount());
         assertEquals("1.2.3.4", reply.getIpAddresses(0));
@@ -100,7 +116,7 @@ public class DomainLookupServerTest {
 
         // Test indirect call.
         DomainLookupServiceBlockingStub stub = setupClient(serverName);
-        DNSRecord reply = stub.getDomain(HostName.newBuilder().setName("usa.gov").build());
+        DNSRecord reply = stub.getDomain(Message.newBuilder().setHostName("usa.gov").build());
 
         assertEquals(1, reply.getIpAddressesCount());
         assertEquals("1.2.3.4", reply.getIpAddresses(0));
@@ -127,7 +143,7 @@ public class DomainLookupServerTest {
         exceptionRule.expect(StatusRuntimeException.class);
         exceptionRule.expectMessage("NOT_FOUND");
 
-        stub.getDomain(HostName.newBuilder().setName("usa.gov").build());
+        stub.getDomain(Message.newBuilder().setHostName("usa.gov").build());
     }
 
     @Test
@@ -151,7 +167,70 @@ public class DomainLookupServerTest {
         exceptionRule.expect(StatusRuntimeException.class);
         exceptionRule.expectMessage("INTERNAL");
 
-        stub.getDomain(HostName.newBuilder().setName("usa.gov").build());
+        stub.getDomain(Message.newBuilder().setHostName("usa.gov").build());
     }
 
+    @Test
+    public void testMaxHopCountLimitPass() throws Exception {
+        final ServerOperationalConfig config = ServerOperationalConfig.newBuilder()
+                .setDnsExpiryDays(3).setMaxHopCount(2).build();
+
+        // Setup peer-peer
+        final Set<LookupResult> friendFriendServerMappings = Collections.singleton(
+                new LookupResult(LookupResult.MappingType.DIRECT, "usa.gov", "1.2.3.4")
+        );
+        final String peerPeerServer = setupServer(new ConstantsMappingStore(friendFriendServerMappings), Collections.emptyMap(), config);
+
+        // Setup peer
+        final Set<LookupResult> peerServerMappings = Collections.singleton(
+                new LookupResult(LookupResult.MappingType.INDIRECT, "usa.gov", "usgov2")
+        );
+        Map<String, Peer> peerPeers = Collections.singletonMap("usgov2", new Peer("usgov2", setupClient(peerPeerServer)));
+        final String peerServer = setupServer(new ConstantsMappingStore(peerServerMappings), peerPeers, config);
+
+        // Setup server
+        Set<LookupResult> mappings = Collections.singleton(
+                new LookupResult(LookupResult.MappingType.INDIRECT, "usa.gov", "usgov")
+        );
+        Map<String, Peer> peers = Collections.singletonMap("usgov", new Peer("usgov", setupClient(peerServer)));
+        String serverName = setupServer(new ConstantsMappingStore(mappings), peers, config);
+
+        // Test indirect call.
+        DomainLookupServiceBlockingStub stub = setupClient(serverName);
+        DNSRecord reply = stub.getDomain(Message.newBuilder().setHostName("usa.gov").build());
+        assertEquals(1, reply.getIpAddressesCount());
+        assertEquals("1.2.3.4", reply.getIpAddresses(0));
+    }
+
+    @Test
+    public void testMaxHopCountLimitFail() throws Exception {
+        final ServerOperationalConfig config = ServerOperationalConfig.newBuilder()
+                .setDnsExpiryDays(3).setMaxHopCount(1).build();
+
+        // Setup peer-peer
+        final Set<LookupResult> friendFriendServerMappings = Collections.singleton(
+                new LookupResult(LookupResult.MappingType.DIRECT, "usa.gov", "1.2.3.4")
+        );
+        final String peerPeerServer = setupServer(new ConstantsMappingStore(friendFriendServerMappings), Collections.emptyMap(), config);
+
+        // Setup peer
+        final Set<LookupResult> peerServerMappings = Collections.singleton(
+                new LookupResult(LookupResult.MappingType.INDIRECT, "usa.gov", "usgov2")
+        );
+        Map<String, Peer> peerPeers = Collections.singletonMap("usgov2", new Peer("usgov2", setupClient(peerPeerServer)));
+        final String peerServer = setupServer(new ConstantsMappingStore(peerServerMappings), peerPeers, config);
+
+        // Setup server
+        Set<LookupResult> mappings = Collections.singleton(
+                new LookupResult(LookupResult.MappingType.INDIRECT, "usa.gov", "usgov")
+        );
+        Map<String, Peer> peers = Collections.singletonMap("usgov", new Peer("usgov", setupClient(peerServer)));
+        String serverName = setupServer(new ConstantsMappingStore(mappings), peers, config);
+
+        // Test indirect call.
+        DomainLookupServiceBlockingStub stub = setupClient(serverName);
+        DNSRecord reply = stub.getDomain(Message.newBuilder().setHostName("usa.gov").build());
+        assertEquals(0, reply.getIpAddressesCount());
+        assertTrue(reply.getHostName().isEmpty());
+    }
 }

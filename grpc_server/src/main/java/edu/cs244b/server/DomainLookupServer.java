@@ -1,14 +1,19 @@
 package edu.cs244b.server;
 
+import com.google.common.annotations.VisibleForTesting;
 import edu.cs244b.common.DNSRecord;
+import edu.cs244b.common.DNSRecordP2P;
 import edu.cs244b.common.DomainLookupServiceGrpc;
-import edu.cs244b.common.HostName;
+import edu.cs244b.common.Message;
 import edu.cs244b.common.NullOrEmpty;
+import edu.cs244b.common.P2PMessage;
 import edu.cs244b.mappings.JSONMappingStore;
 import edu.cs244b.mappings.LookupResult;
 import edu.cs244b.mappings.Manager;
 import io.grpc.*;
 import io.grpc.stub.StreamObserver;
+import org.apache.commons.lang3.tuple.Pair;
+import org.joda.time.DateTimeConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -23,51 +28,33 @@ public class DomainLookupServer {
     private final int port;
     private final Server server;
 
-    public DomainLookupServer(int port) throws IOException {
-        this(
-                port,
-                new JSONMappingStore(ServerUtils.defaultJSONLookupDB()),
-                ServerUtils.loadPeers(ServerUtils.defaultPeerList())
-        );
-    }
-
-    /** Create a DomainLookup server listening on {@code port} using {@code lookupFile} database. */
-    public DomainLookupServer(int port, Manager.MappingStore mappingStore, Map<String, Peer> peers) {
-        this(ServerBuilder.forPort(port), mappingStore, peers, port);
+    public DomainLookupServer(int port) {
+        this(port, new JSONMappingStore(ServerUtils.defaultJSONLookupDB()));
     }
 
     /** Create a DomainLookup server using serverBuilder as a base and lookup entries as data. */
-    public DomainLookupServer(
-            ServerBuilder<?> serverBuilder,
-            Manager.MappingStore mappingStore,
-            Map<String, Peer> peers,
-            int port) {
+    public DomainLookupServer(int port, Manager.MappingStore mappingStore) {
         this.port = port;
-        server = serverBuilder.addService(
-                new DomainLookupService(
-                        new Manager(mappingStore),
-                        peers
-                )
-        ).build();
+        server = ServerBuilder
+                .forPort(port)
+                .addService(new DomainLookupService(new Manager(mappingStore)))
+                .build();
     }
 
     /** Start serving requests. */
     public void start() throws IOException {
         server.start();
         logger.info("Server started, listening on " + port);
-        Runtime.getRuntime().addShutdownHook(new Thread() {
-            @Override
-            public void run() {
-                // Use stderr here since the logger may have been reset by its JVM shutdown hook.
-                System.err.println("*** shutting down gRPC server since JVM is shutting down");
-                try {
-                    DomainLookupServer.this.stop();
-                } catch (InterruptedException e) {
-                    e.printStackTrace(System.err);
-                }
-                System.err.println("*** server shut down");
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            // Use stderr here since the logger may have been reset by its JVM shutdown hook.
+            System.err.println("*** shutting down gRPC server since JVM is shutting down");
+            try {
+                DomainLookupServer.this.stop();
+            } catch (InterruptedException e) {
+                e.printStackTrace(System.err);
             }
-        });
+            System.err.println("*** server shut down");
+        }));
     }
 
     /** Stop serving requests and shutdown resources. */
@@ -105,62 +92,125 @@ public class DomainLookupServer {
         private final Manager mappingManager;
         private final Map<String, Peer> peers;
 
-        DomainLookupService(final Manager manager, Map<String, Peer> peers) {
+        private final long dnsExpiryTime;
+        private final long maxAllowedHops;
+
+        DomainLookupService(final Manager manager) {
+            this.mappingManager = manager;
+            this.peers = ServerUtils.loadPeers();
+
+            final ServerOperationalConfig serverOpConfig = ServerUtils.getServerOpConfig();
+            dnsExpiryTime = serverOpConfig.getDnsExpiryDays() * DateTimeConstants.MILLIS_PER_DAY;
+            maxAllowedHops = serverOpConfig.getMaxHopCount();
+        }
+
+        @VisibleForTesting
+        DomainLookupService(final Manager manager,
+                            final Map<String, Peer> peers,
+                            final ServerOperationalConfig serverOpConfig) {
             this.mappingManager = manager;
             this.peers = peers;
+            dnsExpiryTime = serverOpConfig.getDnsExpiryDays() * DateTimeConstants.MILLIS_PER_DAY;
+            maxAllowedHops = serverOpConfig.getMaxHopCount();
         }
 
         @Override
-        public void getDomain(final HostName hostName, StreamObserver<DNSRecord> responseObserver) {
-            if (NullOrEmpty.isTrue(hostName.getName())) {
+        public void getDomain(final Message message, final StreamObserver<DNSRecord> responseObserver) {
+            final Pair<Status, DNSRecordP2P> dnsInfo = resolveDNSInfo(message, ServerUtils.ZERO);
+            if (dnsInfo.getKey() != Status.OK) {
+                responseObserver.onError(new StatusException(dnsInfo.getKey()));
+                return;
+            }
+
+            responseObserver.onNext(dnsInfo.getValue().getDnsRecord());
+            responseObserver.onCompleted();
+        }
+
+        @Override
+        public void getDomainP2P(final P2PMessage pMessage, final StreamObserver<DNSRecordP2P> responseObserver) {
+            if (pMessage.getMessage() == null || pMessage.getHopCount() < ServerUtils.ONE) {
                 responseObserver.onError(new StatusException(Status.INVALID_ARGUMENT));
                 return;
             }
 
-            LookupResult lookupResult = mappingManager.lookupHostname(hostName.getName());
-            if (lookupResult == null) {
-                responseObserver.onError(new StatusException(Status.NOT_FOUND));
+            if (pMessage.getHopCount() > maxAllowedHops) {
+                responseObserver.onNext(DNSRecordP2P.newBuilder().build());
+                responseObserver.onCompleted();
+                //responseObserver.onError(new StatusException(Status.OUT_OF_RANGE));
                 return;
             }
 
+            final Pair<Status, DNSRecordP2P> dnsInfo = resolveDNSInfo(pMessage.getMessage(), pMessage.getHopCount());
+            if (dnsInfo.getKey() != Status.OK) {
+                responseObserver.onError(new StatusException(dnsInfo.getKey()));
+                return;
+            }
+
+            responseObserver.onNext(dnsInfo.getValue());
+            responseObserver.onCompleted();
+        }
+
+        private Pair<Status, DNSRecordP2P> resolveDNSInfo(final Message message, final int hopCount) {
+            if (NullOrEmpty.isTrue(message.getHostName())) {
+                return Pair.of(Status.INVALID_ARGUMENT, DNSRecordP2P.newBuilder().build());
+            }
+
+            final LookupResult lookupResult = mappingManager.lookupHostname(message.getHostName());
+            if (lookupResult == null) {
+                return Pair.of(Status.NOT_FOUND, DNSRecordP2P.newBuilder().build());
+            }
+
+            Status status = Status.OK;
+            DNSRecordP2P dnsRecordP2P = null;
             if (lookupResult.getType() == LookupResult.MappingType.INDIRECT) {
-                String peerName = lookupResult.getValue();
-                if (!peers.containsKey(peerName)) {
-                    responseObserver.onError(new StatusException(Status.INTERNAL));
-                    return;
+                try {
+                    dnsRecordP2P = indirectResolution(lookupResult, hopCount);
+                } catch (StatusRuntimeException sre) {
+                    switch (sre.getStatus().getCode()) {
+                        case NOT_FOUND:
+                            status = Status.NOT_FOUND;
+                            break;
+                        default:
+                            status = Status.INTERNAL;
+                    }
+                } catch (Exception ex) {
+                    status = Status.INTERNAL;
                 }
-
-                Peer peer = peers.get(peerName);
-
-                indirectResolution(responseObserver, lookupResult.getHostname(), peer);
             } else {
-                responseObserver.onNext(buildResponse(lookupResult));
-                responseObserver.onCompleted();
+                dnsRecordP2P = buildP2PResponse(lookupResult);
             }
+
+            return Pair.of(status, dnsRecordP2P);
         }
 
-        private void indirectResolution(StreamObserver<DNSRecord> responseObserver, String key, Peer peer) {
-            try {
-                responseObserver.onNext(peer.getStub().getDomain(HostName.newBuilder().setName(key).build()));
-                responseObserver.onCompleted();
-            } catch (StatusRuntimeException sre) {
-                switch (sre.getStatus().getCode()) {
-                    case NOT_FOUND:
-                        responseObserver.onError(new StatusException(Status.NOT_FOUND));
-                        break;
-                    default:
-                        responseObserver.onError(new StatusException(Status.INTERNAL));
-                }
+        private DNSRecordP2P indirectResolution(final LookupResult lookupResult,
+                                                final int hopCount) throws StatusException {
+            final String peerName = lookupResult.getValue();
+            if (!peers.containsKey(peerName)) {
+                throw new StatusException(Status.INTERNAL);
             }
+
+            final Peer peer = peers.get(peerName);
+            return peer.getStub()
+                    .getDomainP2P(P2PMessage.newBuilder()
+                            .setMessage(Message.newBuilder()
+                                    .setHostName(lookupResult.getHostname()).build())
+                            .setHopCount(hopCount + 1)
+                            .build());
         }
 
-        private DNSRecord buildResponse(final LookupResult result) {
-            return DNSRecord.newBuilder()
-                    .setHostName(result.getHostname())
-                    .addIpAddresses(result.getValue())
-                    .build();
+        private DNSRecordP2P buildP2PResponse(final LookupResult result) {
+            final DNSRecordP2P.Builder builder = DNSRecordP2P.newBuilder();
+            if (result != null) {
+                final DNSRecord dnsRecord = DNSRecord.newBuilder()
+                        .setHostName(result.getHostname())
+                        .addIpAddresses(result.getValue())
+                        .build();
+                builder.setDnsRecord(dnsRecord)
+                        .setTtl(System.currentTimeMillis() + dnsExpiryTime);
+            }
+            return builder.build();
         }
-
     }
 }
 
