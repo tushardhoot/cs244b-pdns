@@ -1,5 +1,6 @@
 package edu.cs244b.server;
 
+import com.google.common.annotations.VisibleForTesting;
 import edu.cs244b.common.DNSRecord;
 import edu.cs244b.common.DNSRecordP2P;
 import edu.cs244b.common.DomainLookupServiceGrpc;
@@ -24,34 +25,19 @@ import java.util.concurrent.TimeUnit;
 public class DomainLookupServer {
     private static final Logger logger = LoggerFactory.getLogger(DomainLookupServer.class);
 
-    /*
-     * TODO: These values can be made configurable so that each server can define their own limits
-     */
-    private static final int EXPIRY_TIME_IN_MILLIS = 7 * DateTimeConstants.MILLIS_PER_DAY;
-    private static final int MAX_ALLOWED_HOPS = 5;
-
     private final int port;
     private final Server server;
 
-    public DomainLookupServer(int port) throws IOException {
-        this(
-                port,
-                new JSONMappingStore(ServerUtils.defaultJSONLookupDB()),
-                ServerUtils.loadPeers(ServerUtils.defaultPeerList())
-        );
+    public DomainLookupServer(int port) {
+        this(port, new JSONMappingStore(ServerUtils.defaultJSONLookupDB()));
     }
 
     /** Create a DomainLookup server using serverBuilder as a base and lookup entries as data. */
-    public DomainLookupServer(
-            int port,
-            Manager.MappingStore mappingStore,
-            Map<String, Peer> peers) {
+    public DomainLookupServer(int port, Manager.MappingStore mappingStore) {
         this.port = port;
         server = ServerBuilder
                 .forPort(port)
-                .addService(new DomainLookupService(
-                        new Manager(mappingStore),
-                        peers))
+                .addService(new DomainLookupService(new Manager(mappingStore)))
                 .build();
     }
 
@@ -105,11 +91,27 @@ public class DomainLookupServer {
     static class DomainLookupService extends DomainLookupServiceGrpc.DomainLookupServiceImplBase {
         private final Manager mappingManager;
         private final Map<String, Peer> peers;
-        //private final Map<String, Peer> localCache;
 
-        DomainLookupService(final Manager manager, Map<String, Peer> peers) {
+        private final long dnsExpiryTime;
+        private final long maxAllowedHops;
+
+        DomainLookupService(final Manager manager) {
+            this.mappingManager = manager;
+            this.peers = ServerUtils.loadPeers();
+
+            final ServerOperationalConfig serverOpConfig = ServerUtils.getServerOpConfig();
+            dnsExpiryTime = serverOpConfig.getDnsExpiryDays() * DateTimeConstants.MILLIS_PER_DAY;
+            maxAllowedHops = serverOpConfig.getMaxHopCount();
+        }
+
+        @VisibleForTesting
+        DomainLookupService(final Manager manager,
+                            final Map<String, Peer> peers,
+                            final ServerOperationalConfig serverOpConfig) {
             this.mappingManager = manager;
             this.peers = peers;
+            dnsExpiryTime = serverOpConfig.getDnsExpiryDays() * DateTimeConstants.MILLIS_PER_DAY;
+            maxAllowedHops = serverOpConfig.getMaxHopCount();
         }
 
         @Override
@@ -136,8 +138,10 @@ public class DomainLookupServer {
                 return;
             }
 
-            if (message.getHopCount() > MAX_ALLOWED_HOPS) {
-                responseObserver.onError(new StatusException(Status.OUT_OF_RANGE));
+            if (message.getHopCount() > maxAllowedHops) {
+                responseObserver.onNext(DNSRecordP2P.newBuilder().build());
+                responseObserver.onCompleted();
+                //responseObserver.onError(new StatusException(Status.OUT_OF_RANGE));
                 return;
             }
 
@@ -203,7 +207,7 @@ public class DomainLookupServer {
                         .addIpAddresses(result.getValue())
                         .build();
                 builder.setDnsRecord(dnsRecord)
-                        .setTtl(System.currentTimeMillis() + EXPIRY_TIME_IN_MILLIS);
+                        .setTtl(System.currentTimeMillis() + dnsExpiryTime);
             }
             return builder.build();
         }

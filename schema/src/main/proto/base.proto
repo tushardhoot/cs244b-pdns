@@ -15,4 +15,7 @@ message DomainLookupMapping {
     repeated Entry entries = 1;
 }
 
-
+message ServerOperationalConfig {
+    int32 dnsExpiryDays = 1;
+    int32 maxHopCount = 2;
+}
