@@ -15,8 +15,13 @@ class DomainLookupServiceStub(object):
         """
         self.GetDomain = channel.unary_unary(
                 '/edu.cs244b.common.DomainLookupService/GetDomain',
-                request_serializer=domain__lookup__pb2.HostName.SerializeToString,
+                request_serializer=domain__lookup__pb2.Message.SerializeToString,
                 response_deserializer=domain__lookup__pb2.DNSRecord.FromString,
+                )
+        self.GetDomainP2P = channel.unary_unary(
+                '/edu.cs244b.common.DomainLookupService/GetDomainP2P',
+                request_serializer=domain__lookup__pb2.P2PMessage.SerializeToString,
+                response_deserializer=domain__lookup__pb2.DNSRecordP2P.FromString,
                 )
 
 
@@ -24,7 +29,18 @@ class DomainLookupServiceServicer(object):
     """Missing associated documentation comment in .proto file"""
 
     def GetDomain(self, request, context):
-        """Missing associated documentation comment in .proto file"""
+        """
+        This rpc is supposed to be used by the client installed on user's machine
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def GetDomainP2P(self, request, context):
+        """
+        This rpc is supposed to be used for p2p server-server communications
+        The DNS record has an additional expiry time associated with it to indicate that the corresponding record is valid till a certain date/time.
+        """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
@@ -34,8 +50,13 @@ def add_DomainLookupServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
             'GetDomain': grpc.unary_unary_rpc_method_handler(
                     servicer.GetDomain,
-                    request_deserializer=domain__lookup__pb2.HostName.FromString,
+                    request_deserializer=domain__lookup__pb2.Message.FromString,
                     response_serializer=domain__lookup__pb2.DNSRecord.SerializeToString,
+            ),
+            'GetDomainP2P': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetDomainP2P,
+                    request_deserializer=domain__lookup__pb2.P2PMessage.FromString,
+                    response_serializer=domain__lookup__pb2.DNSRecordP2P.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -58,7 +79,23 @@ class DomainLookupService(object):
             timeout=None,
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/edu.cs244b.common.DomainLookupService/GetDomain',
-            domain__lookup__pb2.HostName.SerializeToString,
+            domain__lookup__pb2.Message.SerializeToString,
             domain__lookup__pb2.DNSRecord.FromString,
+            options, channel_credentials,
+            call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def GetDomainP2P(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/edu.cs244b.common.DomainLookupService/GetDomainP2P',
+            domain__lookup__pb2.P2PMessage.SerializeToString,
+            domain__lookup__pb2.DNSRecordP2P.FromString,
             options, channel_credentials,
             call_credentials, compression, wait_for_ready, timeout, metadata)
