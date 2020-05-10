@@ -8,7 +8,16 @@ option java_outer_classname = "DomainLookupProtos";
 
 
 service DomainLookupService {
+    /*
+     * This rpc is supposed to be used by the client installed on user's machine
+     */
     rpc GetDomain(HostName) returns (DNSRecord);
+
+    /*
+     * This rpc is supposed to be used for p2p server-server communications
+     * The DNS record has an additional expiry time associated with it to indicate that the corresponding record is valid till a certain date/time.
+     */
+    rpc GetDomainP2P(HostName) returns (DNSRecordP2P);
 }
 
 message HostName {
@@ -18,4 +27,9 @@ message HostName {
 message DNSRecord {
     string hostName = 1;
     repeated string ipAddresses = 2;
+}
+
+message DNSRecordP2P {
+    DNSRecord dnsRecord = 1;
+    int64 ttl = 2;
 }

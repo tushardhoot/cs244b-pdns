@@ -19,6 +19,8 @@
         <grpc.version>1.29.0</grpc.version>
         <protobuf.version>3.11.0</protobuf.version>
         <protoc.version>3.11.0</protoc.version>
+        <joda.time.version>2.10</joda.time.version>
+        <org.apache.commons.version>3.7</org.apache.commons.version>
     </properties>
 
     <modules>
