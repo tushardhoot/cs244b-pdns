@@ -15,6 +15,9 @@ import java.util.stream.Collectors;
 
 public class ServerUtils {
 
+    public static int ZERO = 0;
+    public static int ONE = 1;
+
     /**
      * Gets the default mapping file from classpath.
      */

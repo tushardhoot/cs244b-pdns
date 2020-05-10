@@ -3,7 +3,7 @@ package edu.cs244b.server;
 import edu.cs244b.common.DNSRecord;
 import edu.cs244b.common.DomainLookupServiceGrpc;
 import edu.cs244b.common.DomainLookupServiceGrpc.DomainLookupServiceBlockingStub;
-import edu.cs244b.common.HostName;
+import edu.cs244b.common.Message;
 import edu.cs244b.mappings.ConstantsMappingStore;
 import edu.cs244b.mappings.LookupResult;
 import edu.cs244b.mappings.Manager;
@@ -63,7 +63,7 @@ public class DomainLookupServerTest {
         exceptionRule.expect(StatusRuntimeException.class);
         exceptionRule.expectMessage("NOT_FOUND");
 
-        stub.getDomain(HostName.newBuilder().setName("facebook.com").build());
+        stub.getDomain(Message.newBuilder().setHostName("facebook.com").build());
     }
 
     @Test
@@ -77,7 +77,7 @@ public class DomainLookupServerTest {
                 Collections.emptyMap()
         );
         DomainLookupServiceBlockingStub stub = setupClient(serverName);
-        DNSRecord reply = stub.getDomain(HostName.newBuilder().setName("facebook.com").build());
+        DNSRecord reply = stub.getDomain(Message.newBuilder().setHostName("facebook.com").build());
 
         assertEquals(1, reply.getIpAddressesCount());
         assertEquals("1.2.3.4", reply.getIpAddresses(0));
@@ -100,7 +100,7 @@ public class DomainLookupServerTest {
 
         // Test indirect call.
         DomainLookupServiceBlockingStub stub = setupClient(serverName);
-        DNSRecord reply = stub.getDomain(HostName.newBuilder().setName("usa.gov").build());
+        DNSRecord reply = stub.getDomain(Message.newBuilder().setHostName("usa.gov").build());
 
         assertEquals(1, reply.getIpAddressesCount());
         assertEquals("1.2.3.4", reply.getIpAddresses(0));
@@ -127,7 +127,7 @@ public class DomainLookupServerTest {
         exceptionRule.expect(StatusRuntimeException.class);
         exceptionRule.expectMessage("NOT_FOUND");
 
-        stub.getDomain(HostName.newBuilder().setName("usa.gov").build());
+        stub.getDomain(Message.newBuilder().setHostName("usa.gov").build());
     }
 
     @Test
@@ -151,7 +151,7 @@ public class DomainLookupServerTest {
         exceptionRule.expect(StatusRuntimeException.class);
         exceptionRule.expectMessage("INTERNAL");
 
-        stub.getDomain(HostName.newBuilder().setName("usa.gov").build());
+        stub.getDomain(Message.newBuilder().setHostName("usa.gov").build());
     }
 
 }
