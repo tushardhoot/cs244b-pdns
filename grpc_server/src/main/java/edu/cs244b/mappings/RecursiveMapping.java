@@ -25,11 +25,16 @@ public class RecursiveMapping {
 
         String part = remainder.remove(0);
         if (remainder.isEmpty()) {
-            if (subMappings.containsKey(part) && subMappings.get(part).defaultValue != null) {
-                throw new RuntimeException(String.format("Duplicate mappings for %s", part));
-            }
+            if (subMappings.containsKey(part)) {
+                RecursiveMapping next = subMappings.get(part);
+                if (next.defaultValue != null) {
+                    throw new RuntimeException(String.format("Duplicate mappings for %s", part));
+                }
 
-            subMappings.put(part, new RecursiveMapping(value));
+                next.defaultValue = value;
+            } else {
+                subMappings.put(part, new RecursiveMapping(value));
+            }
         } else {
             subMappings.putIfAbsent(part, new RecursiveMapping());
             subMappings.get(part).pushMapping(remainder, value);
