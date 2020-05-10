@@ -116,12 +116,7 @@ public class DomainLookupServer {
 
         @Override
         public void getDomain(final Message message, final StreamObserver<DNSRecord> responseObserver) {
-            if (NullOrEmpty.isTrue(message.getHostName())) {
-                responseObserver.onError(new StatusException(Status.INVALID_ARGUMENT));
-                return;
-            }
-
-            final Pair<Status, DNSRecordP2P> dnsInfo = resolveDNSInfo(message.getHostName(), ServerUtils.ZERO);
+            final Pair<Status, DNSRecordP2P> dnsInfo = resolveDNSInfo(message, ServerUtils.ZERO);
             if (dnsInfo.getKey() != Status.OK) {
                 responseObserver.onError(new StatusException(dnsInfo.getKey()));
                 return;
@@ -132,20 +127,20 @@ public class DomainLookupServer {
         }
 
         @Override
-        public void getDomainP2P(final P2PMessage message, final StreamObserver<DNSRecordP2P> responseObserver) {
-            if (NullOrEmpty.isTrue(message.getHostName()) || message.getHopCount() < ServerUtils.ONE) {
+        public void getDomainP2P(final P2PMessage pMessage, final StreamObserver<DNSRecordP2P> responseObserver) {
+            if (pMessage.getMessage() == null || pMessage.getHopCount() < ServerUtils.ONE) {
                 responseObserver.onError(new StatusException(Status.INVALID_ARGUMENT));
                 return;
             }
 
-            if (message.getHopCount() > maxAllowedHops) {
+            if (pMessage.getHopCount() > maxAllowedHops) {
                 responseObserver.onNext(DNSRecordP2P.newBuilder().build());
                 responseObserver.onCompleted();
                 //responseObserver.onError(new StatusException(Status.OUT_OF_RANGE));
                 return;
             }
 
-            final Pair<Status, DNSRecordP2P> dnsInfo = resolveDNSInfo(message.getHostName(), message.getHopCount());
+            final Pair<Status, DNSRecordP2P> dnsInfo = resolveDNSInfo(pMessage.getMessage(), pMessage.getHopCount());
             if (dnsInfo.getKey() != Status.OK) {
                 responseObserver.onError(new StatusException(dnsInfo.getKey()));
                 return;
@@ -155,8 +150,12 @@ public class DomainLookupServer {
             responseObserver.onCompleted();
         }
 
-        private Pair<Status, DNSRecordP2P> resolveDNSInfo(final String hostName, final int hopCount) {
-            final LookupResult lookupResult = mappingManager.lookupHostname(hostName);
+        private Pair<Status, DNSRecordP2P> resolveDNSInfo(final Message message, final int hopCount) {
+            if (NullOrEmpty.isTrue(message.getHostName())) {
+                return Pair.of(Status.INVALID_ARGUMENT, DNSRecordP2P.newBuilder().build());
+            }
+
+            final LookupResult lookupResult = mappingManager.lookupHostname(message.getHostName());
             if (lookupResult == null) {
                 return Pair.of(Status.NOT_FOUND, DNSRecordP2P.newBuilder().build());
             }
@@ -194,7 +193,8 @@ public class DomainLookupServer {
             final Peer peer = peers.get(peerName);
             return peer.getStub()
                     .getDomainP2P(P2PMessage.newBuilder()
-                            .setHostName(lookupResult.getHostname())
+                            .setMessage(Message.newBuilder()
+                                    .setHostName(lookupResult.getHostname()).build())
                             .setHopCount(hopCount + 1)
                             .build());
         }

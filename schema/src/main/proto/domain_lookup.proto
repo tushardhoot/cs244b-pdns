@@ -35,6 +35,6 @@ message DNSRecordP2P {
 }
 
 message P2PMessage {
-    string hostName = 1;
+    Message message = 1;
     int32 hopCount = 2;
 }
