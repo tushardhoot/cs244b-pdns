@@ -12,6 +12,8 @@ import io.grpc.StatusRuntimeException;
 import io.grpc.inprocess.InProcessChannelBuilder;
 import io.grpc.inprocess.InProcessServerBuilder;
 
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -20,6 +22,10 @@ import org.junit.runners.JUnit4;
 
 import io.grpc.testing.GrpcCleanupRule;
 
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.*;
 
 import static org.junit.Assert.assertEquals;
@@ -28,20 +34,36 @@ import static org.junit.Assert.assertTrue;
 @RunWith(JUnit4.class)
 public class DomainLookupServerTest {
 
+    private static final String uuid = UUID.randomUUID().toString();
+    private static final String empty_dns_state_file_path = "/tmp/empty_dns_state_" + uuid;
+
     @Rule
     public final GrpcCleanupRule grpcCleanup = new GrpcCleanupRule();
 
     @Rule
     public ExpectedException exceptionRule = ExpectedException.none();
 
+    @BeforeClass
+    public static void init() throws IOException {
+        BufferedWriter w = new BufferedWriter(new FileWriter(empty_dns_state_file_path));
+        w.write("");
+        w.close();
+    }
+
+    @AfterClass
+    public static void close() {
+        new File(empty_dns_state_file_path).delete();
+    }
+
     String setupServer(Manager.MappingStore mappings, Map<String, Peer> peers) throws Exception {
         String serverName = InProcessServerBuilder.generateName();
         final ServerOperationalConfig config = ServerOperationalConfig.newBuilder()
-                .setDnsExpiryDays(3).setMaxHopCount(2).build();
+                .setDnsExpiryDays(3).setMaxHopCount(2).setDnsCacheCapacity(50).setDnsStateFileLocation("/tmp/")
+                .setPermissableHostNameLength(50).build();
         grpcCleanup.register(
                 InProcessServerBuilder.forName(serverName)
                         .directExecutor().addService(
-                        new DomainLookupService(new Manager(mappings), peers, config)
+                        new DomainLookupService(new Manager(mappings), peers, config, "")
                 ).build().start()
         );
 
@@ -55,7 +77,7 @@ public class DomainLookupServerTest {
         grpcCleanup.register(
                 InProcessServerBuilder.forName(serverName)
                         .directExecutor().addService(
-                        new DomainLookupService(new Manager(mappings), peers, config)
+                        new DomainLookupService(new Manager(mappings), peers, config, "")
                 ).build().start()
         );
 
@@ -94,9 +116,13 @@ public class DomainLookupServerTest {
         );
         DomainLookupServiceBlockingStub stub = setupClient(serverName);
         DNSRecord reply = stub.getDomain(Message.newBuilder().setHostName("facebook.com").build());
-
         assertEquals(1, reply.getIpAddressesCount());
         assertEquals("1.2.3.4", reply.getIpAddresses(0));
+
+        //Checking if the DNS record from cache is correct
+        DNSRecord reply2 = stub.getDomain(Message.newBuilder().setHostName("facebook.com").build());
+        assertEquals(1, reply2.getIpAddressesCount());
+        assertEquals("1.2.3.4", reply2.getIpAddresses(0));
     }
 
     @Test
@@ -117,9 +143,13 @@ public class DomainLookupServerTest {
         // Test indirect call.
         DomainLookupServiceBlockingStub stub = setupClient(serverName);
         DNSRecord reply = stub.getDomain(Message.newBuilder().setHostName("usa.gov").build());
-
         assertEquals(1, reply.getIpAddressesCount());
         assertEquals("1.2.3.4", reply.getIpAddresses(0));
+
+        //Checking the correctness of DNS record served from cache
+        DNSRecord reply2 = stub.getDomain(Message.newBuilder().setHostName("usa.gov").build());
+        assertEquals(1, reply2.getIpAddressesCount());
+        assertEquals("1.2.3.4", reply2.getIpAddresses(0));
     }
 
     @Test
@@ -173,7 +203,8 @@ public class DomainLookupServerTest {
     @Test
     public void testMaxHopCountLimitPass() throws Exception {
         final ServerOperationalConfig config = ServerOperationalConfig.newBuilder()
-                .setDnsExpiryDays(3).setMaxHopCount(2).build();
+                .setDnsExpiryDays(3).setMaxHopCount(2).setDnsCacheCapacity(50).setDnsStateFileLocation("/tmp/")
+                .setPermissableHostNameLength(50).build();
 
         // Setup peer-peer
         final Set<LookupResult> friendFriendServerMappings = Collections.singleton(
@@ -205,7 +236,8 @@ public class DomainLookupServerTest {
     @Test
     public void testMaxHopCountLimitFail() throws Exception {
         final ServerOperationalConfig config = ServerOperationalConfig.newBuilder()
-                .setDnsExpiryDays(3).setMaxHopCount(1).build();
+                .setDnsExpiryDays(3).setMaxHopCount(1).setDnsCacheCapacity(50).setDnsStateFileLocation("/tmp/")
+                .setPermissableHostNameLength(50).build();
 
         // Setup peer-peer
         final Set<LookupResult> friendFriendServerMappings = Collections.singleton(

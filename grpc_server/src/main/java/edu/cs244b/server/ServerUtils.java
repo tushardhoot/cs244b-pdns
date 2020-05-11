@@ -3,6 +3,9 @@ package edu.cs244b.server;
 import com.google.gson.Gson;
 import com.google.gson.stream.JsonReader;
 import com.google.protobuf.util.JsonFormat;
+import edu.cs244b.common.DNSRecord;
+import edu.cs244b.common.DNSRecordP2P;
+import edu.cs244b.common.NullOrEmpty;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -18,6 +21,7 @@ public class ServerUtils {
 
     public static int ZERO = 0;
     public static int ONE = 1;
+    public static String DNS_STATE_SUFFIX = "/state/dns_state";
 
     /**
      * Gets the default mapping file from classpath.
@@ -70,6 +74,22 @@ public class ServerUtils {
 
     private static URL getServerOperationalConfig() {
         return DomainLookupServer.class.getResource("server.op.config");
+    }
+
+    public static boolean isHostNameValid(final String hostName, final int permissableLength) {
+        return !NullOrEmpty.isTrue(hostName) && hostName.length() <= permissableLength;
+    }
+
+    public static boolean isDNSRecordValid(final DNSRecordP2P dnsRecordP2P) {
+        if (dnsRecordP2P != null) {
+            final DNSRecord dnsRecord = dnsRecordP2P.getDnsRecord();
+            if (dnsRecord != null
+                    && NullOrEmpty.isFalse(dnsRecord.getHostName())             /* host name is valid */
+                    && dnsRecord.getIpAddressesCount() > 0) {                   /* has ip address */
+                return true;
+            }
+        }
+        return false;
     }
 
     static class Peers {
