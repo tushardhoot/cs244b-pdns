@@ -1,6 +1,7 @@
 package edu.cs244b.server;
 
 import com.google.common.annotations.VisibleForTesting;
+import edu.cs244b.common.CommonUtils;
 import edu.cs244b.common.DNSRecord;
 import edu.cs244b.common.DNSRecordP2P;
 import edu.cs244b.common.DomainLookupServiceGrpc;
@@ -18,6 +19,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.net.UnknownHostException;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
@@ -27,6 +29,7 @@ public class DomainLookupServer {
 
     private final int port;
     private final Server server;
+    final DomainLookupService domainLookupService;
 
     public DomainLookupServer(int port) {
         this(port, new JSONMappingStore(ServerUtils.defaultJSONLookupDB()));
@@ -35,9 +38,10 @@ public class DomainLookupServer {
     /** Create a DomainLookup server using serverBuilder as a base and lookup entries as data. */
     public DomainLookupServer(int port, Manager.MappingStore mappingStore) {
         this.port = port;
+        this.domainLookupService = new DomainLookupService(new Manager(mappingStore));
         server = ServerBuilder
                 .forPort(port)
-                .addService(new DomainLookupService(new Manager(mappingStore)))
+                .addService(domainLookupService)
                 .build();
     }
 
@@ -47,18 +51,23 @@ public class DomainLookupServer {
         logger.info("Server started, listening on " + port);
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             // Use stderr here since the logger may have been reset by its JVM shutdown hook.
-            System.err.println("*** shutting down gRPC server since JVM is shutting down");
+            logger.error("*** shutting down gRPC server since JVM is shutting down");
             try {
                 DomainLookupServer.this.stop();
-            } catch (InterruptedException e) {
-                e.printStackTrace(System.err);
+            } catch (InterruptedException ex) {
+                logger.error("Exception while stopping server", ex);
             }
-            System.err.println("*** server shut down");
+            logger.error("*** server shut down");
         }));
     }
 
     /** Stop serving requests and shutdown resources. */
     public void stop() throws InterruptedException {
+        if (domainLookupService != null) {
+            //TODO - also store state at every 5-10 mins as backup in case of a failure
+            domainLookupService.storeState();
+        }
+
         if (server != null) {
             server.shutdown().awaitTermination(30, TimeUnit.SECONDS);
         }
@@ -94,6 +103,9 @@ public class DomainLookupServer {
 
         private final long dnsExpiryTime;
         private final int maxAllowedHops;
+        private final int maxAllowedHostNameLength;
+
+        private final DNSCache dnsCache;
 
         DomainLookupService(final Manager manager) {
             this.mappingManager = manager;
@@ -102,16 +114,23 @@ public class DomainLookupServer {
             final ServerOperationalConfig serverOpConfig = ServerUtils.getServerOpConfig();
             dnsExpiryTime = serverOpConfig.getDnsExpiryDays() * DateTimeConstants.MILLIS_PER_DAY;
             maxAllowedHops = serverOpConfig.getMaxHopCount();
+            maxAllowedHostNameLength = serverOpConfig.getPermissableHostNameLength();
+            dnsCache = new DNSCache(serverOpConfig.getDnsCacheCapacity(), logger);
+            dnsCache.load(serverOpConfig.getDnsStateFileLocation() + ServerUtils.DNS_STATE_SUFFIX);
         }
 
         @VisibleForTesting
         DomainLookupService(final Manager manager,
                             final Map<String, Peer> peers,
-                            final ServerOperationalConfig serverOpConfig) {
+                            final ServerOperationalConfig serverOpConfig,
+                            final String dnsStateFilePath) {
             this.mappingManager = manager;
             this.peers = peers;
             dnsExpiryTime = serverOpConfig.getDnsExpiryDays() * DateTimeConstants.MILLIS_PER_DAY;
             maxAllowedHops = serverOpConfig.getMaxHopCount();
+            maxAllowedHostNameLength = serverOpConfig.getPermissableHostNameLength();
+            dnsCache = new DNSCache(serverOpConfig.getDnsCacheCapacity(), logger);
+            dnsCache.load(dnsStateFilePath);
         }
 
         @Override
@@ -133,9 +152,14 @@ public class DomainLookupServer {
                 return;
             }
 
+            final long currentTimeMillis = System.currentTimeMillis();
             final Pair<Status, DNSRecordP2P> dnsInfo = resolveDNSInfo(pMessage.getMessage(), pMessage.getHopCount());
             if (dnsInfo.getKey() != Status.OK) {
                 responseObserver.onError(new StatusException(dnsInfo.getKey()));
+                return;
+            }
+            if (ServerUtils.isDNSRecordValid(dnsInfo.getValue()) && dnsInfo.getValue().getTtl() < currentTimeMillis) {
+                responseObserver.onError(new StatusException(Status.INTERNAL));
                 return;
             }
 
@@ -144,8 +168,15 @@ public class DomainLookupServer {
         }
 
         private Pair<Status, DNSRecordP2P> resolveDNSInfo(final Message message, final int remainingHops) {
-            if (NullOrEmpty.isTrue(message.getHostName())) {
+            if (!ServerUtils.isHostNameValid(message.getHostName(), maxAllowedHostNameLength)) {
                 return Pair.of(Status.INVALID_ARGUMENT, DNSRecordP2P.newBuilder().build());
+            }
+
+            // check local dns cache for resolution - return if found
+            final DNSCache.DNSInfo dnsInfo = dnsCache.get(message.getHostName());
+            final DNSRecordP2P dnsRecord = buildP2PResponse(message.getHostName(), dnsInfo);
+            if (dnsRecord != null) {
+                return Pair.of(Status.OK, dnsRecord);
             }
 
             final LookupResult lookupResult = mappingManager.lookupHostname(message.getHostName());
@@ -178,6 +209,7 @@ public class DomainLookupServer {
                 dnsRecordP2P = buildP2PResponse(lookupResult);
             }
 
+            dnsCache.registerDnsRecord(dnsRecordP2P);
             return Pair.of(status, dnsRecordP2P);
         }
 
@@ -208,6 +240,29 @@ public class DomainLookupServer {
                         .setTtl(System.currentTimeMillis() + dnsExpiryTime);
             }
             return builder.build();
+        }
+
+        private DNSRecordP2P buildP2PResponse(final String hostName, final DNSCache.DNSInfo dnsInfo) {
+            if (dnsInfo == null) {
+                return null;
+            }
+
+            try {
+                return DNSRecordP2P.newBuilder()
+                        .setDnsRecord(DNSRecord.newBuilder()
+                                .setHostName(hostName)
+                                .addIpAddresses(CommonUtils.intToIp(dnsInfo.ip))
+                                .build())
+                        .setTtl(dnsInfo.ttl)
+                        .build();
+            } catch (UnknownHostException ex) {
+                logger.error("Error while resolving IP address", ex);
+                return null;
+            }
+        }
+
+        private void storeState() {
+            // TODO
         }
     }
 }

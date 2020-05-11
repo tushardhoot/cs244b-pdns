@@ -2,6 +2,8 @@ package edu.cs244b.common;
 
 import sun.net.util.IPAddressUtil;
 
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collections;
@@ -14,8 +16,13 @@ public class CommonUtils {
         return ByteBuffer.wrap(IPAddressUtil.textToNumericFormatV4(ipAddress)).getInt();
     }
 
-    public static String intToIp(final Integer ip) {
-        return new String(ByteBuffer.allocate(4).putInt(ip).array());
+    public static String intToIp(final Integer ip) throws UnknownHostException {
+        final byte[] b = new byte[4];
+        b[0] = (byte) ((ip & 0xFF000000) >>> 24);
+        b[1] = (byte) ((ip & 0x00FF0000) >>> 16);
+        b[2] = (byte) ((ip & 0x0000FF00) >>> 8);
+        b[3] = (byte) (ip & 0x000000FF);
+        return InetAddress.getByAddress(null, b).getHostAddress();
     }
 
     public static List<String> rDNSForm(String hostname) {
