@@ -158,7 +158,7 @@ public class DomainLookupServer {
                 responseObserver.onError(new StatusException(dnsInfo.getKey()));
                 return;
             }
-            if (ServerUtils.isDNSRecordValid(dnsInfo.getValue()) && dnsInfo.getValue().getTtl() < currentTimeMillis) {
+            if (ServerUtils.isDNSRecordValid(dnsInfo.getValue()) && dnsInfo.getValue().getExpiryTime() < currentTimeMillis) {
                 responseObserver.onError(new StatusException(Status.INTERNAL));
                 return;
             }
@@ -237,7 +237,7 @@ public class DomainLookupServer {
                         .addIpAddresses(result.getValue())
                         .build();
                 builder.setDnsRecord(dnsRecord)
-                        .setTtl(System.currentTimeMillis() + dnsExpiryTime);
+                        .setExpiryTime(System.currentTimeMillis() + dnsExpiryTime);
             }
             return builder.build();
         }
@@ -253,7 +253,7 @@ public class DomainLookupServer {
                                 .setHostName(hostName)
                                 .addIpAddresses(CommonUtils.intToIp(dnsInfo.ip))
                                 .build())
-                        .setTtl(dnsInfo.ttl)
+                        .setExpiryTime(dnsInfo.expiryTime)
                         .build();
             } catch (UnknownHostException ex) {
                 logger.error("Error while resolving IP address", ex);

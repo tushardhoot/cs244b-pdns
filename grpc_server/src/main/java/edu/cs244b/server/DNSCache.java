@@ -35,7 +35,7 @@ public class DNSCache {
     public synchronized DNSInfo get(final String hostName) {
         // since this is a access-order linked hash map, get pushes this entry to the end of the map
         final DNSInfo dnsInfo = cache.get(hostName);
-        if (dnsInfo != null && dnsInfo.ttl >= System.currentTimeMillis()) {
+        if (dnsInfo != null && dnsInfo.expiryTime >= System.currentTimeMillis()) {
             return dnsInfo;
         }
 
@@ -45,9 +45,9 @@ public class DNSCache {
 
     public void registerDnsRecord(final DNSRecordP2P dnsRecordP2P) {
         if (ServerUtils.isDNSRecordValid(dnsRecordP2P) &&
-                dnsRecordP2P.getTtl() > System.currentTimeMillis()) {   /* ttl is valid */
+                dnsRecordP2P.getExpiryTime() > System.currentTimeMillis()) {   /* ttl is valid */
             final DNSRecord dnsRecord = dnsRecordP2P.getDnsRecord();
-            put(dnsRecord.getHostName(), dnsRecord.getIpAddresses(0), dnsRecordP2P.getTtl());
+            put(dnsRecord.getHostName(), dnsRecord.getIpAddresses(0), dnsRecordP2P.getExpiryTime());
         }
     }
 
@@ -99,7 +99,7 @@ public class DNSCache {
     }
 
     private boolean candidateToBeRemoved(final DNSInfo dnsInfo, final long expiryTimeToConsider) {
-        return dnsInfo == null || dnsInfo.ttl <= expiryTimeToConsider;
+        return dnsInfo == null || dnsInfo.expiryTime <= expiryTimeToConsider;
     }
 
     @VisibleForTesting
@@ -109,11 +109,11 @@ public class DNSCache {
 
     static class DNSInfo {
         public final int ip;
-        public final long ttl;
+        public final long expiryTime;
 
         public DNSInfo(final String ipAddress, final long ttl) {
             this.ip = CommonUtils.ipToInt(ipAddress);
-            this.ttl = ttl;
+            this.expiryTime = ttl;
         }
     }
 }
