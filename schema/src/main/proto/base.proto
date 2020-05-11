@@ -22,3 +22,9 @@ message ServerOperationalConfig {
     int32 permissableHostNameLength = 4;
     string dnsStateFileLocation = 5;
 }
+
+message DNSCacheProto {
+    string hostName = 1;
+    int32 ip = 2;
+    int32 expiryTime = 3;
+}
