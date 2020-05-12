@@ -18,7 +18,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   package='edu.cs244b.common',
   syntax='proto3',
   serialized_options=b'\n\021edu.cs244b.commonB\022DomainLookupProtosP\001',
-  serialized_pb=b'\n\x13\x64omain_lookup.proto\x12\x11\x65\x64u.cs244b.common\"\x1b\n\x07Message\x12\x10\n\x08hostName\x18\x01 \x01(\t\"2\n\tDNSRecord\x12\x10\n\x08hostName\x18\x01 \x01(\t\x12\x13\n\x0bipAddresses\x18\x02 \x03(\t\"L\n\x0c\x44NSRecordP2P\x12/\n\tdnsRecord\x18\x01 \x01(\x0b\x32\x1c.edu.cs244b.common.DNSRecord\x12\x0b\n\x03ttl\x18\x02 \x01(\x03\"K\n\nP2PMessage\x12+\n\x07message\x18\x01 \x01(\x0b\x32\x1a.edu.cs244b.common.Message\x12\x10\n\x08hopCount\x18\x02 \x01(\x05\x32\xac\x01\n\x13\x44omainLookupService\x12\x45\n\tGetDomain\x12\x1a.edu.cs244b.common.Message\x1a\x1c.edu.cs244b.common.DNSRecord\x12N\n\x0cGetDomainP2P\x12\x1d.edu.cs244b.common.P2PMessage\x1a\x1f.edu.cs244b.common.DNSRecordP2PB)\n\x11\x65\x64u.cs244b.commonB\x12\x44omainLookupProtosP\x01\x62\x06proto3'
+  serialized_pb=b'\n\x13\x64omain_lookup.proto\x12\x11\x65\x64u.cs244b.common\"\x1b\n\x07Message\x12\x10\n\x08hostName\x18\x01 \x01(\t\"2\n\tDNSRecord\x12\x10\n\x08hostName\x18\x01 \x01(\t\x12\x13\n\x0bipAddresses\x18\x02 \x03(\t\"S\n\x0c\x44NSRecordP2P\x12/\n\tdnsRecord\x18\x01 \x01(\x0b\x32\x1c.edu.cs244b.common.DNSRecord\x12\x12\n\nexpiryTime\x18\x02 \x01(\x03\"K\n\nP2PMessage\x12+\n\x07message\x18\x01 \x01(\x0b\x32\x1a.edu.cs244b.common.Message\x12\x10\n\x08hopCount\x18\x02 \x01(\x05\x32\xac\x01\n\x13\x44omainLookupService\x12\x45\n\tGetDomain\x12\x1a.edu.cs244b.common.Message\x1a\x1c.edu.cs244b.common.DNSRecord\x12N\n\x0cGetDomainP2P\x12\x1d.edu.cs244b.common.P2PMessage\x1a\x1f.edu.cs244b.common.DNSRecordP2PB)\n\x11\x65\x64u.cs244b.commonB\x12\x44omainLookupProtosP\x01\x62\x06proto3'
 )
 
 
@@ -108,7 +108,7 @@ _DNSRECORDP2P = _descriptor.Descriptor(
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='ttl', full_name='edu.cs244b.common.DNSRecordP2P.ttl', index=1,
+      name='expiryTime', full_name='edu.cs244b.common.DNSRecordP2P.expiryTime', index=1,
       number=2, type=3, cpp_type=2, label=1,
       has_default_value=False, default_value=0,
       message_type=None, enum_type=None, containing_type=None,
@@ -127,7 +127,7 @@ _DNSRECORDP2P = _descriptor.Descriptor(
   oneofs=[
   ],
   serialized_start=123,
-  serialized_end=199,
+  serialized_end=206,
 )
 
 
@@ -164,8 +164,8 @@ _P2PMESSAGE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=201,
-  serialized_end=276,
+  serialized_start=208,
+  serialized_end=283,
 )
 
 _DNSRECORDP2P.fields_by_name['dnsRecord'].message_type = _DNSRECORD
@@ -213,8 +213,8 @@ _DOMAINLOOKUPSERVICE = _descriptor.ServiceDescriptor(
   file=DESCRIPTOR,
   index=0,
   serialized_options=None,
-  serialized_start=279,
-  serialized_end=451,
+  serialized_start=286,
+  serialized_end=458,
   methods=[
   _descriptor.MethodDescriptor(
     name='GetDomain',

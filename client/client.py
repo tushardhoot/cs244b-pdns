@@ -42,7 +42,7 @@ class DnsClient:
         Returns the resulting protobuf on success.
         """
         stub = domain_lookup_pb2_grpc.DomainLookupServiceStub(self.channel)
-        request = domain_lookup_pb2.HostName(name=domain_name)
+        request = domain_lookup_pb2.Message(hostName=domain_name)
         logging.info(
             'Sending Request for domain: {}'.format(domain_name))
         return stub.GetDomain(request)
