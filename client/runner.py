@@ -8,7 +8,6 @@ import logging
 import socketserver
 import traceback
 import client
-import dnslib
 
 
 logging.getLogger('').setLevel(logging.INFO)
@@ -42,6 +41,7 @@ class DNSRequestHandler(socketserver.BaseRequestHandler):
             self.send_data(str.encode(str_results))
         except Exception:
             traceback.print_exc()
+
 
 
 class LocalDNSServer(socketserver.ThreadingMixIn, socketserver.UDPServer):
