@@ -8,6 +8,8 @@ import logging
 import socketserver
 import traceback
 import client
+import dnswrapper
+import dnslib
 
 
 logging.getLogger('').setLevel(logging.INFO)
@@ -30,18 +32,28 @@ class DNSRequestHandler(socketserver.BaseRequestHandler):
         return self.request[1].sendto(data, self.client_address)
 
     def handle(self):
-        print('Implement handling the DNS request...')
         try:
-            #  TODO(kbaichoo): implement the handling of the DNS record /
-            #  sending the correct records.
-            dns_record_proto = self.grpc_client.request_dns_lookup(
-                'walmart.com')
-            str_results = str(dns_record_proto)
-            print(str_results)
-            self.send_data(str.encode(str_results))
+            # Get the request data
+            request_pkt = self.get_data()
+
+            # Extract Query Information
+            hostname, record_type = dnswrapper.extract_query(request_pkt)
+
+            # Do RPC lookups
+            dns_record_proto = self.grpc_client.request_dns_lookup(hostname)
+            logging.debug('Proto response:', dns_record_proto)
+
+            # Generate DNS response
+            response_pkt = dnswrapper.generate_dns_packet(
+                request_pkt, hostname, dns_record_proto.ipAddresses)
+
+            # Useful to debug responses.
+            # decoded = dnslib.DNSRecord.parse(response_pkt)
+            # print(decoded)
+
+            self.send_data(response_pkt)
         except Exception:
             traceback.print_exc()
-
 
 
 class LocalDNSServer(socketserver.ThreadingMixIn, socketserver.UDPServer):
