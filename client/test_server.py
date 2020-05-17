@@ -16,8 +16,12 @@ SERVER_PORT = 8980
 class DomainLookupServicer(domain_lookup_pb2_grpc.DomainLookupServiceServicer):
     def GetDomain(self, request, context):
         logging.info('Received Request:{}'.format(request))
-        record = domain_lookup_pb2.DNSRecord(
-            hostName='walmart.com', ipAddresses=['0.0.0.0'])
+
+        if request.hostName == 'kevinbaichoo.com':
+            record = domain_lookup_pb2.DNSRecord(
+                hostName='kevinbaichoo.com', ipAddresses=['104.236.159.189'])
+        else:
+            record = domain_lookup_pb2.DNSRecord()
         time.sleep(1)
         return record
 
