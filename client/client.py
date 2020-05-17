@@ -39,13 +39,20 @@ class DnsClient:
         Args:
          - domain_name: a string containing the name of the domain to lookup.
 
-        Returns the resulting protobuf on success.
+        Returns the resulting protobuf on success or None if the GRPC
+        call encountered errors.
         """
         stub = domain_lookup_pb2_grpc.DomainLookupServiceStub(self.channel)
         request = domain_lookup_pb2.Message(hostName=domain_name)
         logging.info(
             'Sending Request for domain: {}'.format(domain_name))
-        return stub.GetDomain(request)
+
+        try:
+            return stub.GetDomain(request)
+        except grpc.RpcError as e:
+            status_code = e.code()
+            logging.error('RPC Status: {} Details: {}'.format(status_code.name,
+                                                              e.details()))
 
 
 if __name__ == '__main__':
