@@ -4,7 +4,6 @@ Test Server in python supporting the rpc call (just to test changes)
 """
 from concurrent import futures
 import logging
-import time
 import grpc
 import domain_lookup_pb2
 import domain_lookup_pb2_grpc
@@ -14,16 +13,24 @@ SERVER_PORT = 8980
 
 
 class DomainLookupServicer(domain_lookup_pb2_grpc.DomainLookupServiceServicer):
+
+    # Contains all known mappings by the server.
+    lookup_table = {
+        'kevinbaichoo.com': ['104.236.159.189'],
+        'walmart.com': ['8.8.8.1']
+    }
+
     def GetDomain(self, request, context):
         logging.info('Received Request:{}'.format(request))
+        hostname = request.hostName
+        ip_addresses = []
 
-        if request.hostName == 'kevinbaichoo.com':
-            record = domain_lookup_pb2.DNSRecord(
-                hostName='kevinbaichoo.com', ipAddresses=['104.236.159.189'])
-        else:
-            record = domain_lookup_pb2.DNSRecord()
-        time.sleep(1)
-        return record
+        if hostname in DomainLookupServicer.lookup_table:
+            ip_addresses = DomainLookupServicer.lookup_table[hostname]
+
+        return domain_lookup_pb2.DNSRecord(
+            hostName=hostname,
+            ipAddresses=ip_addresses)
 
 
 if __name__ == '__main__':
