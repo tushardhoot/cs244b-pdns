@@ -21,6 +21,7 @@ public class ServerUtils {
 
     public static int ZERO = 0;
     public static int ONE = 1;
+    public static int MAX_HOP_ALLOWED = 32;
     public static String DNS_STATE_SUFFIX = "/state/dns_state";
 
     /**
