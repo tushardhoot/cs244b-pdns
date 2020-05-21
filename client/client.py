@@ -47,7 +47,15 @@ class DnsClient:
         request = domain_lookup_pb2.Message(hostName=domain_name)
         logging.info(
             'Sending Request for domain: {}'.format(domain_name))
-        return stub.GetDomain(request, timeout=self.timeout)
+        try:
+            return stub.GetDomain(request, timeout=self.timeout)
+        except grpc.RpcError as e:
+            if e.code() == grpc.StatusCode.DEADLINE_EXCEEDED:
+                logging.info('request timed out for domain: {}'.format(domain_name))
+                return
+            else:
+                # re-raise
+                raise e
 
 
 if __name__ == '__main__':
