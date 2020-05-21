@@ -41,7 +41,8 @@ class DnsClient:
         Args:
          - domain_name: a string containing the name of the domain to lookup.
 
-        Returns the resulting protobuf on success.
+        Returns the resulting protobuf on success or None if the GRPC
+        call encountered errors.
         """
         stub = domain_lookup_pb2_grpc.DomainLookupServiceStub(self.channel)
         request = domain_lookup_pb2.Message(hostName=domain_name)
@@ -50,11 +51,14 @@ class DnsClient:
         try:
             return stub.GetDomain(request, timeout=self.timeout)
         except grpc.RpcError as e:
-            if e.code() == grpc.StatusCode.DEADLINE_EXCEEDED:
-                logging.info('request timed out for domain: {}'.format(domain_name))
+            status_code = e.code()
+            if status_code == grpc.StatusCode.DEADLINE_EXCEEDED:
+                logging.error('request timed out for domain: {}'.format(domain_name))
                 return
             else:
                 # re-raise
+                logging.error('RPC Status: {} Details: {}'.format(status_code.name,
+                                                              e.details()))
                 raise e
 
 

@@ -113,7 +113,7 @@ public class DomainLookupServer {
 
             final ServerOperationalConfig serverOpConfig = ServerUtils.getServerOpConfig();
             dnsExpiryTime = serverOpConfig.getDnsExpiryDays() * DateTimeConstants.MILLIS_PER_DAY;
-            maxAllowedHops = serverOpConfig.getMaxHopCount();
+            maxAllowedHops = Math.min(serverOpConfig.getMaxHopCount(), ServerUtils.MAX_HOP_ALLOWED);
             maxAllowedHostNameLength = serverOpConfig.getPermissableHostNameLength();
             dnsCache = new DNSCache(serverOpConfig.getDnsCacheCapacity(), logger);
             dnsCache.load(serverOpConfig.getDnsStateFileLocation() + ServerUtils.DNS_STATE_SUFFIX);
@@ -153,7 +153,7 @@ public class DomainLookupServer {
             }
 
             final long currentTimeMillis = System.currentTimeMillis();
-            final Pair<Status, DNSRecordP2P> dnsInfo = resolveDNSInfo(pMessage.getMessage(), pMessage.getHopCount());
+            final Pair<Status, DNSRecordP2P> dnsInfo = resolveDNSInfo(pMessage.getMessage(), Math.min(pMessage.getHopCount(), maxAllowedHops));
             if (dnsInfo.getKey() != Status.OK) {
                 responseObserver.onError(new StatusException(dnsInfo.getKey()));
                 return;

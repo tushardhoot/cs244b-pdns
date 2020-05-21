@@ -43,14 +43,19 @@ class DNSRequestHandler(socketserver.BaseRequestHandler):
             dns_record_proto = self.grpc_client.request_dns_lookup(hostname)
             logging.debug('Proto response:', dns_record_proto)
 
-            # Generate DNS response
-            response_pkt = dnswrapper.generate_dns_packet(
-                request_pkt, hostname, dns_record_proto.ipAddresses)
+            if dns_record_proto:
+                # Our gRPC call succeeded, though we might not have
+                # found any ip addresses.
+                response_pkt = dnswrapper.generate_dns_packet(
+                    request_pkt, hostname, dns_record_proto.ipAddresses)
+            else:
+                # Our gRPC call failed
+                response_pkt = dnswrapper.generate_dns_packet(
+                    request_pkt, hostname, [])
 
             # Useful to debug responses.
             # decoded = dnslib.DNSRecord.parse(response_pkt)
             # print(decoded)
-
             self.send_data(response_pkt)
         except Exception:
             traceback.print_exc()
