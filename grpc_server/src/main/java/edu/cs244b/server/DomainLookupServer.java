@@ -42,6 +42,7 @@ public class DomainLookupServer {
         server = ServerBuilder
                 .forPort(port)
                 .addService(domainLookupService)
+                .intercept(new TimeoutInterceptor())
                 .build();
     }
 
