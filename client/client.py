@@ -14,13 +14,15 @@ import domain_lookup_pb2_grpc
 
 DEFAULT_SERVER_IP = '127.0.0.1'
 DEFAULT_SERVER_PORT = '8980'
+DEFAULT_TIMEOUT_SECONDS = 5
 
 
 class DnsClient:
-    def __init__(self, dns_translator, server_ip, server_port):
+    def __init__(self, dns_translator, server_ip, server_port, timeout):
         self.translator = dns_translator
         self.server_ip = server_ip
         self.server_port = server_port
+        self.timeout = timeout
 
         # The channel used to communicate with the DNS server.
         logging.info(
@@ -45,7 +47,7 @@ class DnsClient:
         request = domain_lookup_pb2.Message(hostName=domain_name)
         logging.info(
             'Sending Request for domain: {}'.format(domain_name))
-        return stub.GetDomain(request)
+        return stub.GetDomain(request, timeout=self.timeout)
 
 
 if __name__ == '__main__':
@@ -59,9 +61,11 @@ if __name__ == '__main__':
                         help='The port your DNS Server is running on.')
     parser.add_argument('--backend_ip', default=DEFAULT_SERVER_IP,
                         help='The ip your DNS Server is running on.')
+    parser.add_argument("--timeout", default=DEFAULT_TIMEOUT_SECONDS,
+                        help='The timeout in seconds for DNS lookup requests.')
     args = parser.parse_args()
 
     # Create the client object and test out some domains.
-    client = DnsClient(None, args.backend_ip, args.backend_port)
+    client = DnsClient(None, args.backend_ip, args.backend_port, args.timeout)
     print(client.request_dns_lookup('walmart.com'))
     print(client.request_dns_lookup('facebook.com'))
