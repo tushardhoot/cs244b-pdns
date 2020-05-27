@@ -18,7 +18,8 @@ DEFAULT_TIMEOUT_SECONDS = 5
 
 
 class DnsClient:
-    def __init__(self, dns_translator, server_ip, server_port, timeout):
+    def __init__(self, dns_translator, server_ip, server_port,
+                 timeout=DEFAULT_TIMEOUT_SECONDS):
         self.translator = dns_translator
         self.server_ip = server_ip
         self.server_port = server_port
@@ -53,13 +54,13 @@ class DnsClient:
         except grpc.RpcError as e:
             status_code = e.code()
             if status_code == grpc.StatusCode.DEADLINE_EXCEEDED:
-                logging.error('request timed out for domain: {}'.format(domain_name))
-                return
+                logging.error(
+                    'request timed out for domain: {}'.format(domain_name))
             else:
                 # re-raise
-                logging.error('RPC Status: {} Details: {}'.format(status_code.name,
-                                                              e.details()))
-                raise e
+                logging.error('RPC Status: {} Details: {}'.format(
+                    status_code.name,
+                    e.details()))
 
 
 if __name__ == '__main__':
