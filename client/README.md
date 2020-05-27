@@ -9,11 +9,15 @@ our runner.py will resolve the browser / user's request.
 # To use your client to resolve traffic on your machine
 Follow the instructions [here](https://developers.google.com/speed/public-dns/docs/using#change_your_dns_servers_settings)
 
+# TO RUN UNIT TESTS
+Use the following command to run all unit tests:
+`python3 -m unittest discover -v`
+
+All of the unit tests will be in the `test/` directory.
+
 # TO RUN
-1. Launch your test server / backend (either ./test\_server.py or the javabackend)
+1. Launch your test server / backend (either ./simpe\_server.py or the javabackend)
 2. Run the runner.py here
 3. Send a request to the UDP port on localhost specifed that runner ran with (53 by default) -- I've serialized the request of a DNS query for 'walmart.com' if you want to test it with a real DNS query.
-
-
 
 You should see a request for walmart.com on the backend.

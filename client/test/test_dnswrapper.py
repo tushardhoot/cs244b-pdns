@@ -2,6 +2,14 @@
 """
 Tests for the DNS wrapper module.
 """
+# Bit of a hack to get directory structure working
+import os
+import sys
+if os.getcwd().endswith('client'):
+    sys.path.append('./client/')
+else:
+    sys.path.append('../client/')
+
 from dnslib import DNSRecord
 import dnswrapper
 import unittest

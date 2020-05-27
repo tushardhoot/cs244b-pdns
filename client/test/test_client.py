@@ -2,13 +2,24 @@
 """
 Tests for the DNS wrapper module.
 """
-import unittest
-from test_server import DomainLookupServicer, SERVER_PORT
-import grpc
+# Bit of a hack to get directory structure working
+import os
+import sys
+if os.getcwd().endswith('client'):
+    # Running test using discover from the client root of the client directory
+    sys.path.append('./client/')
+    import client.client as client
+else:
+    # Running from test directory
+    sys.path.append('../client/')
+    import client as client
+    
+import domain_lookup_pb2_grpc as domain_lookup_pb2_grpc
+import domain_lookup_pb2 as domain_lookup_pb2
 from concurrent import futures
-import domain_lookup_pb2
-import domain_lookup_pb2_grpc
-import client
+from simple_server import DomainLookupServicer, SERVER_PORT
+import grpc
+import unittest
 
 
 class TestClient(unittest.TestCase):
