@@ -12,26 +12,33 @@ import grpc
 import domain_lookup_pb2
 import domain_lookup_pb2_grpc
 
-DEFAULT_SERVER_IP = '127.0.0.1'
+DEFAULT_SERVER_IP = 'localhost'
 DEFAULT_SERVER_PORT = '8980'
+DEFAULT_SECURE_SERVER_PORT = '7892'
 DEFAULT_TIMEOUT_SECONDS = 5
 
 
 class DnsClient:
-    def __init__(self, dns_translator, server_ip, server_port,
-                 timeout=DEFAULT_TIMEOUT_SECONDS):
-        self.translator = dns_translator
+    def __init__(self, server_ip, server_port,
+                 timeout=DEFAULT_TIMEOUT_SECONDS, pem=None):
         self.server_ip = server_ip
         self.server_port = server_port
         self.timeout = timeout
+        self.pem = pem
 
         # The channel used to communicate with the DNS server.
         logging.info(
             'Connecting to backend on {}:{}'.format(
                 self.server_ip, self.server_port))
-        # Note this is thread safe.
-        self.channel = grpc.insecure_channel(
-            '{}:{}'.format(self.server_ip, self.server_port))
+        server_tuple = '{}:{}'.format(self.server_ip, self.server_port)
+
+        # The channels are thread safe.
+        # Create a secure channel if the users specifies a pem.
+        if self.pem:
+            creds = grpc.ssl_channel_credentials(self.pem)
+            self.channel = grpc.secure_channel(server_tuple, creds)
+        else:
+            self.channel = grpc.insecure_channel(server_tuple)
 
     def request_dns_lookup(self, domain_name):
         """
@@ -69,16 +76,33 @@ if __name__ == '__main__':
 
     # Parse CLI arguments.
     parser = argparse.ArgumentParser(description='Starts up the DNS client.')
-    parser.add_argument('--backend_port', default=DEFAULT_SERVER_PORT,
+    parser.add_argument('--backend_port',
                         type=int,
                         help='The port your DNS Server is running on.')
     parser.add_argument('--backend_ip', default=DEFAULT_SERVER_IP,
                         help='The ip your DNS Server is running on.')
-    parser.add_argument("--timeout", default=DEFAULT_TIMEOUT_SECONDS,
+    parser.add_argument('--timeout', default=DEFAULT_TIMEOUT_SECONDS,
                         help='The timeout in seconds for DNS lookup requests.')
+    parser.add_argument('--server_pem',
+                        help='Path to the server pem file used to establish a '
+                        'secure channel (otherwise the channel is insecure.')
     args = parser.parse_args()
 
+    backend_port = args.backend_port
+
+    pem = None
+    if args.server_pem:
+        with open(args.server_pem, 'rb') as f:
+            pem = f.read()
+        if not backend_port:
+            backend_port = DEFAULT_SECURE_SERVER_PORT
+
+    # If no backend_port yet set, use the default insecure port.
+    if not backend_port:
+        backend_port = DEFAULT_SERVER_PORT
+
     # Create the client object and test out some domains.
-    client = DnsClient(None, args.backend_ip, args.backend_port, args.timeout)
+    client = DnsClient(args.backend_ip,
+                       backend_port, args.timeout, pem)
     print(client.request_dns_lookup('walmart.com'))
     print(client.request_dns_lookup('facebook.com'))

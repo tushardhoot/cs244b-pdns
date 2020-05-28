@@ -21,3 +21,12 @@ All of the unit tests will be in the `test/` directory.
 3. Send a request to the UDP port on localhost specifed that runner ran with (53 by default) -- I've serialized the request of a DNS query for 'walmart.com' if you want to test it with a real DNS query.
 
 You should see a request for walmart.com on the backend.
+
+If you want to use secure channels, you'll need to specify the cert.pem file to
+either `runner.py` or `client.py`.
+
+Note the backend you're connecting to must have a cooresponding cert / pk for
+that common name specified.
+
+For example the simple server / the cert and key in the directory uses localhost.
+If the hostname doesn't work, gRPC will reject the query.

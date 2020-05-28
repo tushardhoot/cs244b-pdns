@@ -39,7 +39,7 @@ class TestClient(unittest.TestCase):
 
     def test_grpc_success(self):
         # Tests that the grpc client can connect correctly and issue an RPC
-        grpc_client = client.DnsClient(None, 'localhost', SERVER_PORT)
+        grpc_client = client.DnsClient(localhost', SERVER_PORT)
         response = grpc_client.request_dns_lookup('walmart.com')
         self.assertIsNotNone(response)
 
@@ -47,7 +47,7 @@ class TestClient(unittest.TestCase):
         # Tests failure, via an error in the gRPC status.
         # This should test for any gRPC error even though the one raised
         # INVALID_ARGUMENT.
-        grpc_client = client.DnsClient(None, 'localhost', SERVER_PORT)
+        grpc_client = client.DnsClient(localhost', SERVER_PORT)
         response = grpc_client.request_dns_lookup('DoesNotExist.Mapping.Foo')
         self.assertIsNone(response)
 

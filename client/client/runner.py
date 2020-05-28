@@ -84,6 +84,9 @@ if __name__ == '__main__':
                         help='The port your DNS Server is running on.')
     parser.add_argument('--backend_ip', default=DEFAULT_SERVER_IP,
                         help='The ip your DNS Server is running on.')
+    parser.add_argument('--server_pem',
+                        help='Path to the server pem file used to establish a '
+                        'secure channel (otherwise the channel is insecure.')
 
     # Arguments for the local DNS service
     parser.add_argument('--port', default=53, type=int,
@@ -93,8 +96,15 @@ if __name__ == '__main__':
                         help='The timeout in seconds for DNS lookup requests.')
     args = parser.parse_args()
 
+    # Read contents of pem file for server backend secure connection
+    # if provided
+    pem = None
+    if args.server_pem:
+        with open(args.server_pem, 'r') as f:
+            pem = f.read()
+
     grpc_client = client.DnsClient(
-        None, args.backend_ip, args.backend_port, args.timeout)
+        args.backend_ip, args.backend_port, args.timeout, pem)
     server_info = ('', args.port)
 
     # Launch the server.
