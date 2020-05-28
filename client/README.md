@@ -30,3 +30,12 @@ that common name specified.
 
 For example the simple server / the cert and key in the directory uses localhost.
 If the hostname doesn't work, gRPC will reject the query.
+
+# TO GENERATE CERTS
+Run:
+`openssl req -newkey rsa:2048 -new -nodes -x509 -days 3650 -keyout key.pem -out cert.pem`
+
+The servers pk will be key.pem and the certificate cert.pem.
+
+You can use `openssl x509 -text -noout -in cert.pem` to inspect the cert.
+
