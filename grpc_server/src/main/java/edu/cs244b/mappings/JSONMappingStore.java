@@ -2,6 +2,7 @@ package edu.cs244b.mappings;
 
 import com.google.gson.Gson;
 import com.google.gson.stream.JsonReader;
+import edu.cs244b.common.CommonUtils;
 import edu.cs244b.common.NullOrEmpty;
 
 import java.io.IOException;
@@ -13,15 +14,18 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-public class JSONMappingStore implements Manager.MappingStore {
+public class JSONMappingStore implements MappingStore {
 
     private final URL path;
+    private final RecursiveMapping resolver;
 
     public JSONMappingStore(URL path) {
         this.path = path;
+        this.resolver = new RecursiveMapping();
     }
 
-    public Set<LookupResult> loadMappings() {
+    @Override
+    public void setup() {
         InputStream inputStream;
         try {
             inputStream = path.openStream();
@@ -33,7 +37,14 @@ public class JSONMappingStore implements Manager.MappingStore {
         Gson gson = new Gson();
         JSONMappings jsonMappings = gson.fromJson(reader, JSONMappings.class);
 
-        return jsonMappings.entries.stream().map(JSONMappingStore::validResultOrThrow).collect(Collectors.toSet());
+        jsonMappings.entries.stream()
+                .map(JSONMappingStore::validResultOrThrow)
+                .forEach(result -> resolver.pushMapping(CommonUtils.rDNSForm(result.hostname), result));
+    }
+
+    @Override
+    public LookupResult lookup(String hostname) {
+        return resolver.lookup(CommonUtils.rDNSForm(hostname));
     }
 
     private static LookupResult validResultOrThrow(Entry entry) {

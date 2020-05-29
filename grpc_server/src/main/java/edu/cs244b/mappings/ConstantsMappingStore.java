@@ -1,17 +1,23 @@
 package edu.cs244b.mappings;
 
+import edu.cs244b.common.CommonUtils;
+
 import java.util.Set;
 
-public class ConstantsMappingStore implements Manager.MappingStore {
+public class ConstantsMappingStore implements MappingStore {
 
-    private Set<LookupResult> constantMappings;
+    private final RecursiveMapping resolver;
 
     public ConstantsMappingStore(Set<LookupResult> mappings) {
-        this.constantMappings = mappings;
+        this.resolver = new RecursiveMapping();
+        mappings.forEach(result -> resolver.pushMapping(CommonUtils.rDNSForm(result.hostname), result));
     }
 
     @Override
-    public Set<LookupResult> loadMappings() {
-        return constantMappings;
+    public void setup() {}
+
+    @Override
+    public LookupResult lookup(String hostname) {
+        return resolver.lookup(CommonUtils.rDNSForm(hostname));
     }
 }

@@ -10,7 +10,7 @@ import edu.cs244b.common.NullOrEmpty;
 import edu.cs244b.common.P2PMessage;
 import edu.cs244b.mappings.JSONMappingStore;
 import edu.cs244b.mappings.LookupResult;
-import edu.cs244b.mappings.Manager;
+import edu.cs244b.mappings.MappingStore;
 import io.grpc.*;
 import io.grpc.stub.StreamObserver;
 import org.apache.commons.lang3.tuple.Pair;
@@ -36,9 +36,9 @@ public class DomainLookupServer {
     }
 
     /** Create a DomainLookup server using serverBuilder as a base and lookup entries as data. */
-    public DomainLookupServer(int port, Manager.MappingStore mappingStore) {
+    public DomainLookupServer(int port, MappingStore mappingStore) {
         this.port = port;
-        this.domainLookupService = new DomainLookupService(new Manager(mappingStore));
+        this.domainLookupService = new DomainLookupService(mappingStore);
         server = ServerBuilder
                 .forPort(port)
                 .addService(domainLookupService)
@@ -77,21 +77,10 @@ public class DomainLookupServer {
     /**
      * Await termination on the main thread since the grpc library uses daemon threads.
      */
-    private void blockUntilShutdown() throws InterruptedException {
+    void blockUntilShutdown() throws InterruptedException {
         if (server != null) {
             server.awaitTermination();
         }
-    }
-
-    public static void main(String[] args) throws Exception {
-        int port = 8980;
-        if (args.length > 0 && NullOrEmpty.isFalse(args[0])) {
-            port = Integer.parseInt(args[0]);
-        }
-
-        DomainLookupServer server = new DomainLookupServer(port);
-        server.start();
-        server.blockUntilShutdown();
     }
 
     /**
@@ -99,7 +88,7 @@ public class DomainLookupServer {
      * <p>See domain_lookup.proto for details of the methods.
      */
     static class DomainLookupService extends DomainLookupServiceGrpc.DomainLookupServiceImplBase {
-        private final Manager mappingManager;
+        private final MappingStore mappingStore;
         private final Map<String, Peer> peers;
 
         private final long dnsExpiryTime;
@@ -108,8 +97,9 @@ public class DomainLookupServer {
 
         private final DNSCache dnsCache;
 
-        DomainLookupService(final Manager manager) {
-            this.mappingManager = manager;
+        DomainLookupService(final MappingStore mappingStore) {
+            this.mappingStore = mappingStore;
+            this.mappingStore.setup();
             this.peers = ServerUtils.loadPeers();
 
             final ServerOperationalConfig serverOpConfig = ServerUtils.getServerOpConfig();
@@ -121,11 +111,12 @@ public class DomainLookupServer {
         }
 
         @VisibleForTesting
-        DomainLookupService(final Manager manager,
+        DomainLookupService(final MappingStore mappingStore,
                             final Map<String, Peer> peers,
                             final ServerOperationalConfig serverOpConfig,
                             final String dnsStateFilePath) {
-            this.mappingManager = manager;
+            this.mappingStore = mappingStore;
+            this.mappingStore.setup();
             this.peers = peers;
             dnsExpiryTime = serverOpConfig.getDnsExpiryDays() * DateTimeConstants.MILLIS_PER_DAY;
             maxAllowedHops = serverOpConfig.getMaxHopCount();
@@ -180,7 +171,7 @@ public class DomainLookupServer {
                 return Pair.of(Status.OK, dnsRecord);
             }
 
-            final LookupResult lookupResult = mappingManager.lookupHostname(message.getHostName());
+            final LookupResult lookupResult = mappingStore.lookup(message.getHostName());
             if (lookupResult == null) {
                 return Pair.of(Status.NOT_FOUND, DNSRecordP2P.newBuilder().build());
             }

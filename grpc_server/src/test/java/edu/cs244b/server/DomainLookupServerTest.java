@@ -6,7 +6,7 @@ import edu.cs244b.common.DomainLookupServiceGrpc.DomainLookupServiceBlockingStub
 import edu.cs244b.common.Message;
 import edu.cs244b.mappings.ConstantsMappingStore;
 import edu.cs244b.mappings.LookupResult;
-import edu.cs244b.mappings.Manager;
+import edu.cs244b.mappings.MappingStore;
 import edu.cs244b.server.DomainLookupServer.DomainLookupService;
 import io.grpc.StatusRuntimeException;
 import io.grpc.inprocess.InProcessChannelBuilder;
@@ -55,7 +55,7 @@ public class DomainLookupServerTest {
         new File(empty_dns_state_file_path).delete();
     }
 
-    String setupServer(Manager.MappingStore mappings, Map<String, Peer> peers) throws Exception {
+    String setupServer(MappingStore mappings, Map<String, Peer> peers) throws Exception {
         String serverName = InProcessServerBuilder.generateName();
         final ServerOperationalConfig config = ServerOperationalConfig.newBuilder()
                 .setDnsExpiryDays(3).setMaxHopCount(2).setDnsCacheCapacity(50).setDnsStateFileLocation("/tmp/")
@@ -63,21 +63,21 @@ public class DomainLookupServerTest {
         grpcCleanup.register(
                 InProcessServerBuilder.forName(serverName)
                         .directExecutor().addService(
-                        new DomainLookupService(new Manager(mappings), peers, config, "")
+                        new DomainLookupService(mappings, peers, config, "")
                 ).build().start()
         );
 
         return serverName;
     }
 
-    String setupServer(final Manager.MappingStore mappings,
+    String setupServer(final MappingStore mappings,
                        final Map<String, Peer> peers,
                        final ServerOperationalConfig config) throws Exception {
         String serverName = InProcessServerBuilder.generateName();
         grpcCleanup.register(
                 InProcessServerBuilder.forName(serverName)
                         .directExecutor().addService(
-                        new DomainLookupService(new Manager(mappings), peers, config, "")
+                        new DomainLookupService(mappings, peers, config, "")
                 ).build().start()
         );
 
