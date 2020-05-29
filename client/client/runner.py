@@ -89,9 +89,12 @@ if __name__ == '__main__':
     parser.add_argument('--port', default=53, type=int,
                         help='The port to listen on for the local '
                         'UDP DNS Server.')
+    parser.add_argument("--timeout", default=client.DEFAULT_TIMEOUT_SECONDS,
+                        help='The timeout in seconds for DNS lookup requests.')
     args = parser.parse_args()
 
-    grpc_client = client.DnsClient(None, args.backend_ip, args.backend_port)
+    grpc_client = client.DnsClient(
+        None, args.backend_ip, args.backend_port, args.timeout)
     server_info = ('', args.port)
 
     # Launch the server.
