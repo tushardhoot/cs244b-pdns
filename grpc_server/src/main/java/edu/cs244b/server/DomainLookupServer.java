@@ -6,18 +6,19 @@ import edu.cs244b.common.DNSRecord;
 import edu.cs244b.common.DNSRecordP2P;
 import edu.cs244b.common.DomainLookupServiceGrpc;
 import edu.cs244b.common.Message;
-import edu.cs244b.common.NullOrEmpty;
 import edu.cs244b.common.P2PMessage;
 import edu.cs244b.mappings.JSONMappingStore;
 import edu.cs244b.mappings.LookupResult;
 import edu.cs244b.mappings.MappingStore;
 import io.grpc.*;
+import io.grpc.netty.shaded.io.grpc.netty.NettyServerBuilder;
 import io.grpc.stub.StreamObserver;
 import org.apache.commons.lang3.tuple.Pair;
 import org.joda.time.DateTimeConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.net.ssl.SSLException;
 import java.io.IOException;
 import java.net.UnknownHostException;
 import java.util.Map;
@@ -31,16 +32,28 @@ public class DomainLookupServer {
     private final Server server;
     final DomainLookupService domainLookupService;
 
-    public DomainLookupServer(int port) {
+    public DomainLookupServer(int port) throws Exception {
         this(port, new JSONMappingStore(ServerUtils.defaultJSONLookupDB()));
     }
 
     /** Create a DomainLookup server using serverBuilder as a base and lookup entries as data. */
-    public DomainLookupServer(int port, MappingStore mappingStore) {
+    public DomainLookupServer(int port, MappingStore mappingStore) throws Exception {
         this.port = port;
-        this.domainLookupService = new DomainLookupService(mappingStore);
-        server = ServerBuilder
+        final ServerOperationalConfig serverOpConfig = ServerUtils.getServerOpConfig();
+        this.domainLookupService = new DomainLookupService(mappingStore, serverOpConfig);
+        /*server = ServerBuilder
                 .forPort(port)
+                .intercept(new TimeoutInterceptor())
+                .build();*/
+        /*
+         * openssl req -newkey rsa:2048 -new -nodes -x509 -days 3650 -keyout key.pem -out cert.pem
+         * generate the private key and ssl certificate
+         * server certificate: /var/cs244b.p2p.dns/ssl_cert/server
+         * client certificate: /var/cs244b.p2p.dns/ssl_cert/client
+         * trusted contacts certificate: /var/cs244b.p2p.dns/ssl_cert/trusted_contacts/<contact_id>
+         */
+        server = NettyServerBuilder.forPort(port)
+                .sslContext(ServerUtils.getServerSSLContext(serverOpConfig))
                 .addService(domainLookupService)
                 .intercept(new TimeoutInterceptor())
                 .build();
@@ -94,18 +107,19 @@ public class DomainLookupServer {
         private final long dnsExpiryTime;
         private final int maxAllowedHops;
         private final int maxAllowedHostNameLength;
+        private final String sslCertBaseDirectory;
 
         private final DNSCache dnsCache;
 
-        DomainLookupService(final MappingStore mappingStore) {
+        DomainLookupService(final MappingStore mappingStore, final ServerOperationalConfig serverOpConfig) {
             this.mappingStore = mappingStore;
             this.mappingStore.setup();
             this.peers = ServerUtils.loadPeers();
 
-            final ServerOperationalConfig serverOpConfig = ServerUtils.getServerOpConfig();
             dnsExpiryTime = serverOpConfig.getDnsExpiryDays() * DateTimeConstants.MILLIS_PER_DAY;
             maxAllowedHops = Math.min(serverOpConfig.getMaxHopCount(), ServerUtils.MAX_HOP_ALLOWED);
             maxAllowedHostNameLength = serverOpConfig.getPermissableHostNameLength();
+            sslCertBaseDirectory = serverOpConfig.getSslCertBaseLocation();
             dnsCache = new DNSCache(serverOpConfig.getDnsCacheCapacity(), logger);
             dnsCache.load(serverOpConfig.getDnsStateFileLocation() + ServerUtils.DNS_STATE_SUFFIX);
         }
@@ -121,6 +135,7 @@ public class DomainLookupServer {
             dnsExpiryTime = serverOpConfig.getDnsExpiryDays() * DateTimeConstants.MILLIS_PER_DAY;
             maxAllowedHops = serverOpConfig.getMaxHopCount();
             maxAllowedHostNameLength = serverOpConfig.getPermissableHostNameLength();
+            sslCertBaseDirectory = serverOpConfig.getSslCertBaseLocation();
             dnsCache = new DNSCache(serverOpConfig.getDnsCacheCapacity(), logger);
             dnsCache.load(dnsStateFilePath);
         }
@@ -190,6 +205,8 @@ public class DomainLookupServer {
                             default:
                                 status = Status.INTERNAL;
                         }
+                    } catch (SSLException ssle) {
+                        status = Status.UNAUTHENTICATED;
                     } catch (Exception ex) {
                         status = Status.INTERNAL;
                     }
@@ -206,14 +223,14 @@ public class DomainLookupServer {
         }
 
         private DNSRecordP2P indirectResolution(final LookupResult lookupResult,
-                                                final int remainingHops) throws StatusException {
+                                                final int remainingHops) throws Exception {
             final String peerName = lookupResult.getValue();
             if (!peers.containsKey(peerName)) {
                 throw new StatusException(Status.INTERNAL);
             }
 
             final Peer peer = peers.get(peerName);
-            return peer.getStub()
+            return peer.getStub(sslCertBaseDirectory)
                     .getDomainP2P(P2PMessage.newBuilder()
                             .setMessage(Message.newBuilder()
                                     .setHostName(lookupResult.getHostname()).build())

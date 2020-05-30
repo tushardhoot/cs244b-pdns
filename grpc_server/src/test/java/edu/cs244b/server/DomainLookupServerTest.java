@@ -14,6 +14,7 @@ import io.grpc.inprocess.InProcessServerBuilder;
 
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -59,6 +60,7 @@ public class DomainLookupServerTest {
         String serverName = InProcessServerBuilder.generateName();
         final ServerOperationalConfig config = ServerOperationalConfig.newBuilder()
                 .setDnsExpiryDays(3).setMaxHopCount(2).setDnsCacheCapacity(50).setDnsStateFileLocation("/tmp/")
+                .setMutualTlsEnabled(true).setSslCertBaseLocation("/var/cs244b.p2p.dns/ssl_certificates")
                 .setPermissableHostNameLength(50).build();
         grpcCleanup.register(
                 InProcessServerBuilder.forName(serverName)
@@ -204,6 +206,7 @@ public class DomainLookupServerTest {
     public void testMaxHopCountLimitPass() throws Exception {
         final ServerOperationalConfig config = ServerOperationalConfig.newBuilder()
                 .setDnsExpiryDays(3).setMaxHopCount(2).setDnsCacheCapacity(50).setDnsStateFileLocation("/tmp/")
+                .setMutualTlsEnabled(true).setSslCertBaseLocation("/var/cs244b.p2p.dns/ssl_certificates")
                 .setPermissableHostNameLength(50).build();
 
         // Setup peer-peer
@@ -237,7 +240,9 @@ public class DomainLookupServerTest {
     public void testMaxHopCountLimitFail() throws Exception {
         final ServerOperationalConfig config = ServerOperationalConfig.newBuilder()
                 .setDnsExpiryDays(3).setMaxHopCount(1).setDnsCacheCapacity(50).setDnsStateFileLocation("/tmp/")
-                .setPermissableHostNameLength(50).build();
+                .setPermissableHostNameLength(50)
+                .setMutualTlsEnabled(true).setSslCertBaseLocation("/var/cs244b.p2p.dns/ssl_certificates")
+                .build();
 
         // Setup peer-peer
         final Set<LookupResult> friendFriendServerMappings = Collections.singleton(
@@ -264,5 +269,13 @@ public class DomainLookupServerTest {
         DNSRecord reply = stub.getDomain(Message.newBuilder().setHostName("usa.gov").build());
         assertEquals(0, reply.getIpAddressesCount());
         assertTrue(reply.getHostName().isEmpty());
+    }
+
+    @Test
+    @Ignore
+    public void testCertificates() throws Exception {
+        final String baseDir = "/var/cs244b.p2p.dns/ssl_certificates";
+        CertificateReader.getClientCertificateAuthorities(baseDir);
+        CertificateReader.getServerCertificateAuthorities(baseDir);
     }
 }
