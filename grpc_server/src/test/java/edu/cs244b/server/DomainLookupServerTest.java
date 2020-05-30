@@ -37,6 +37,7 @@ public class DomainLookupServerTest {
 
     private static final String uuid = UUID.randomUUID().toString();
     private static final String empty_dns_state_file_path = "/tmp/empty_dns_state_" + uuid;
+    private static final String cert_base_dir = "/var/cs244b.p2p.dns/ssl_certificates";
 
     @Rule
     public final GrpcCleanupRule grpcCleanup = new GrpcCleanupRule();
@@ -60,7 +61,7 @@ public class DomainLookupServerTest {
         String serverName = InProcessServerBuilder.generateName();
         final ServerOperationalConfig config = ServerOperationalConfig.newBuilder()
                 .setDnsExpiryDays(3).setMaxHopCount(2).setDnsCacheCapacity(50).setDnsStateFileLocation("/tmp/")
-                .setMutualTlsEnabled(true).setSslCertBaseLocation("/var/cs244b.p2p.dns/ssl_certificates")
+                .setMutualTlsEnabled(true).setSslCertBaseLocation(cert_base_dir)
                 .setPermissableHostNameLength(50).build();
         grpcCleanup.register(
                 InProcessServerBuilder.forName(serverName)
@@ -206,7 +207,7 @@ public class DomainLookupServerTest {
     public void testMaxHopCountLimitPass() throws Exception {
         final ServerOperationalConfig config = ServerOperationalConfig.newBuilder()
                 .setDnsExpiryDays(3).setMaxHopCount(2).setDnsCacheCapacity(50).setDnsStateFileLocation("/tmp/")
-                .setMutualTlsEnabled(true).setSslCertBaseLocation("/var/cs244b.p2p.dns/ssl_certificates")
+                .setMutualTlsEnabled(true).setSslCertBaseLocation(cert_base_dir)
                 .setPermissableHostNameLength(50).build();
 
         // Setup peer-peer
@@ -241,7 +242,7 @@ public class DomainLookupServerTest {
         final ServerOperationalConfig config = ServerOperationalConfig.newBuilder()
                 .setDnsExpiryDays(3).setMaxHopCount(1).setDnsCacheCapacity(50).setDnsStateFileLocation("/tmp/")
                 .setPermissableHostNameLength(50)
-                .setMutualTlsEnabled(true).setSslCertBaseLocation("/var/cs244b.p2p.dns/ssl_certificates")
+                .setMutualTlsEnabled(true).setSslCertBaseLocation(cert_base_dir)
                 .build();
 
         // Setup peer-peer
@@ -274,8 +275,7 @@ public class DomainLookupServerTest {
     @Test
     @Ignore
     public void testCertificates() throws Exception {
-        final String baseDir = "/var/cs244b.p2p.dns/ssl_certificates";
-        CertificateReader.getClientCertificateAuthorities(baseDir);
-        CertificateReader.getServerCertificateAuthorities(baseDir);
+        CertificateReader.getClientCertificateAuthorities(cert_base_dir);
+        CertificateReader.getServerCertificateAuthorities(cert_base_dir);
     }
 }
