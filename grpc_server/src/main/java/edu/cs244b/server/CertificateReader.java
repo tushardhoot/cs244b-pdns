@@ -1,6 +1,8 @@
 package edu.cs244b.server;
 
 import com.google.common.collect.Lists;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import sun.security.provider.X509Factory;
 
 import java.io.BufferedReader;
@@ -13,6 +15,7 @@ import java.util.Base64;
 import java.util.List;
 
 class CertificateReader {
+    private static final Logger logger = LoggerFactory.getLogger(CertificateReader.class);
 
     /*
      * openssl req -newkey rsa:2048 -new -nodes -x509 -days 3650 -keyout key.pem -out cert.pem
@@ -35,18 +38,28 @@ class CertificateReader {
         return new File(certBaseDirectory + File.separator + SERVER + File.separator + KEY);
     }
 
-    public static X509Certificate getClientCertificateAuthorities(final String certBaseDirectory) throws Exception {
-        return parseCertificate(certBaseDirectory + File.separator + CLIENT + File.separator + CERTIFICATE_FILENAME);
+    public static X509Certificate getClientCertificateAuthorities(final String certBaseDirectory) {
+        X509Certificate certificate = null;
+        try {
+            certificate = parseCertificate(certBaseDirectory + File.separator + CLIENT + File.separator + CERTIFICATE_FILENAME);
+        } catch (Exception ex) {
+            logger.info("Error while parsing certificate for client", ex);
+        }
+        return certificate;
     }
 
-    public static List<X509Certificate> getServerCertificateAuthorities(final String certBaseDirectory) throws Exception {
+    public static List<X509Certificate> getServerCertificateAuthorities(final String certBaseDirectory) {
         final List<X509Certificate> certificates = Lists.newArrayList();
         final String baseDirTrustedContacts = certBaseDirectory + File.separator + TRUSTED_CONTACTS;
         final File[] trustedContacts = new File(baseDirTrustedContacts).listFiles();
         if (trustedContacts != null) {
             for (final File trustedContact : trustedContacts) {
                 if (trustedContact.isDirectory()) {
-                    certificates.add(parseCertificate(trustedContact.getAbsolutePath() + File.separator + CERTIFICATE_FILENAME));
+                    try {
+                        certificates.add(parseCertificate(trustedContact.getAbsolutePath() + File.separator + CERTIFICATE_FILENAME));
+                    } catch (Exception ex) {
+                        logger.info("Error while parsing certificate for trusted contact {}", trustedContact.getName(), ex);
+                    }
                 }
             }
         }
