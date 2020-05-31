@@ -3,11 +3,11 @@ package edu.cs244b.server;
 import edu.cs244b.common.DNSRecord;
 import edu.cs244b.common.DomainLookupServiceGrpc;
 import edu.cs244b.common.DomainLookupServiceGrpc.DomainLookupServiceBlockingStub;
+import edu.cs244b.server.DomainLookupServer.DomainLookupService;
 import edu.cs244b.common.Message;
 import edu.cs244b.mappings.ConstantsMappingStore;
 import edu.cs244b.mappings.LookupResult;
 import edu.cs244b.mappings.MappingStore;
-import edu.cs244b.server.DomainLookupServer.DomainLookupService;
 import io.grpc.StatusRuntimeException;
 import io.grpc.inprocess.InProcessChannelBuilder;
 import io.grpc.inprocess.InProcessServerBuilder;
@@ -62,7 +62,7 @@ public class DomainLookupServerTest {
         final ServerOperationalConfig config = ServerOperationalConfig.newBuilder()
                 .setDnsExpiryDays(3).setMaxHopCount(2).setDnsCacheCapacity(50).setDnsStateFileLocation("/tmp/")
                 .setMutualTlsEnabled(true).setSslCertBaseLocation(cert_base_dir)
-                .setPermissableHostNameLength(50).build();
+                .setPermissibleHostNameLength(50).build();
         grpcCleanup.register(
                 InProcessServerBuilder.forName(serverName)
                         .directExecutor().addService(
@@ -208,7 +208,7 @@ public class DomainLookupServerTest {
         final ServerOperationalConfig config = ServerOperationalConfig.newBuilder()
                 .setDnsExpiryDays(3).setMaxHopCount(2).setDnsCacheCapacity(50).setDnsStateFileLocation("/tmp/")
                 .setMutualTlsEnabled(true).setSslCertBaseLocation(cert_base_dir)
-                .setPermissableHostNameLength(50).build();
+                .setPermissibleHostNameLength(50).build();
 
         // Setup peer-peer
         final Set<LookupResult> friendFriendServerMappings = Collections.singleton(
@@ -241,7 +241,7 @@ public class DomainLookupServerTest {
     public void testMaxHopCountLimitFail() throws Exception {
         final ServerOperationalConfig config = ServerOperationalConfig.newBuilder()
                 .setDnsExpiryDays(3).setMaxHopCount(1).setDnsCacheCapacity(50).setDnsStateFileLocation("/tmp/")
-                .setPermissableHostNameLength(50)
+                .setPermissibleHostNameLength(50)
                 .setMutualTlsEnabled(true).setSslCertBaseLocation(cert_base_dir)
                 .build();
 

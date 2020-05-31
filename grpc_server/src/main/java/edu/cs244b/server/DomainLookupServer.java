@@ -30,7 +30,7 @@ public class DomainLookupServer {
 
     private final int port;
     private final Server server;
-    final DomainLookupService domainLookupService;
+    private final DomainLookupService domainLookupService;
 
     public DomainLookupServer(int port) throws Exception {
         this(port, new JSONMappingStore(ServerUtils.defaultJSONLookupDB()));
@@ -118,7 +118,7 @@ public class DomainLookupServer {
 
             dnsExpiryTime = serverOpConfig.getDnsExpiryDays() * DateTimeConstants.MILLIS_PER_DAY;
             maxAllowedHops = Math.min(serverOpConfig.getMaxHopCount(), ServerUtils.MAX_HOP_ALLOWED);
-            maxAllowedHostNameLength = serverOpConfig.getPermissableHostNameLength();
+            maxAllowedHostNameLength = serverOpConfig.getPermissibleHostNameLength();
             sslCertBaseDirectory = serverOpConfig.getSslCertBaseLocation();
             dnsCache = new DNSCache(serverOpConfig.getDnsCacheCapacity(), logger);
             dnsCache.load(serverOpConfig.getDnsStateFileLocation() + ServerUtils.DNS_STATE_SUFFIX);
@@ -134,7 +134,7 @@ public class DomainLookupServer {
             this.peers = peers;
             dnsExpiryTime = serverOpConfig.getDnsExpiryDays() * DateTimeConstants.MILLIS_PER_DAY;
             maxAllowedHops = serverOpConfig.getMaxHopCount();
-            maxAllowedHostNameLength = serverOpConfig.getPermissableHostNameLength();
+            maxAllowedHostNameLength = serverOpConfig.getPermissibleHostNameLength();
             sslCertBaseDirectory = serverOpConfig.getSslCertBaseLocation();
             dnsCache = new DNSCache(serverOpConfig.getDnsCacheCapacity(), logger);
             dnsCache.load(dnsStateFilePath);
