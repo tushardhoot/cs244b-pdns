@@ -48,9 +48,9 @@ public class DomainLookupServer {
         /*
          * openssl req -newkey rsa:2048 -new -nodes -x509 -days 3650 -keyout key.pem -out cert.pem
          * generate the private key and ssl certificate
-         * server certificate: /var/cs244b.p2p.dns/ssl_cert/server
-         * client certificate: /var/cs244b.p2p.dns/ssl_cert/client
-         * trusted contacts certificate: /var/cs244b.p2p.dns/ssl_cert/trusted_contacts/<contact_id>
+         * server certificate: /var/cs244b.p2p.dns/ssl_certificates/server
+         * client certificate: /var/cs244b.p2p.dns/ssl_certificates/client
+         * trusted contacts certificate: /var/cs244b.p2p.dns/ssl_certificates/trusted_contacts/<contact_id>
          */
         server = NettyServerBuilder.forPort(port)
                 .sslContext(ServerUtils.getServerSSLContext(serverOpConfig))
