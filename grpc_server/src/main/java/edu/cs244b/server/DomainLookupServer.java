@@ -127,12 +127,16 @@ public class DomainLookupServer {
 
         @Override
         public void getDomain(final Message message, final StreamObserver<DNSRecord> responseObserver) {
+            logger.info("Incoming request from client for host name: {}", message.getHostName());
             final Pair<Status, DNSRecordP2P> dnsInfo = resolveDNSInfo(message, maxAllowedHops);
             if (dnsInfo.getKey() != Status.OK) {
                 responseObserver.onError(new StatusException(dnsInfo.getKey()));
                 return;
             }
 
+            final String resolvedIp = (dnsInfo.getValue().getDnsRecord().getIpAddressesCount() > 0) ?
+                    dnsInfo.getValue().getDnsRecord().getIpAddresses(0) : "";
+            logger.info("DNS resolved for host name {}: {}", message.getHostName(), resolvedIp);
             responseObserver.onNext(dnsInfo.getValue().getDnsRecord());
             responseObserver.onCompleted();
         }
@@ -144,6 +148,7 @@ public class DomainLookupServer {
                 return;
             }
 
+            logger.info("Incoming P2P request for host name: {}", pMessage.getMessage().getHostName());
             final long currentTimeMillis = System.currentTimeMillis();
             final Pair<Status, DNSRecordP2P> dnsInfo = resolveDNSInfo(pMessage.getMessage(), Math.min(pMessage.getHopCount(), maxAllowedHops));
             if (dnsInfo.getKey() != Status.OK) {
@@ -155,6 +160,9 @@ public class DomainLookupServer {
                 return;
             }
 
+            final String resolvedIp = (dnsInfo.getValue().getDnsRecord().getIpAddressesCount() > 0) ?
+                    dnsInfo.getValue().getDnsRecord().getIpAddresses(0) : "";
+            logger.info("P2P resolved DNS for host name {}: {}", pMessage.getMessage().getHostName(), resolvedIp);
             responseObserver.onNext(dnsInfo.getValue());
             responseObserver.onCompleted();
         }
@@ -196,6 +204,7 @@ public class DomainLookupServer {
                 } else {
                     // instead of error, send an empty dns record to uniquely identify this case
                     dnsRecordP2P = DNSRecordP2P.newBuilder().build();
+                    logger.info("Max hops breached for host name: {}", message.getHostName());
                 }
             } else {
                 dnsRecordP2P = buildP2PResponse(lookupResult);
