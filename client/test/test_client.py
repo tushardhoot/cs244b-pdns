@@ -17,7 +17,7 @@ else:
 import domain_lookup_pb2_grpc as domain_lookup_pb2_grpc
 import domain_lookup_pb2 as domain_lookup_pb2
 from concurrent import futures
-from simple_server import DomainLookupServicer, SERVER_PORT
+from simple_server import DomainLookupServicer, INSECURE_SERVER_PORT
 import grpc
 import unittest
 
@@ -29,7 +29,7 @@ class TestClient(unittest.TestCase):
         server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
         domain_lookup_pb2_grpc.add_DomainLookupServiceServicer_to_server(
             StrictDomainLookupServicer(), server)
-        server.add_insecure_port('localhost:{}'.format(SERVER_PORT))
+        server.add_insecure_port('localhost:{}'.format(INSECURE_SERVER_PORT))
         server.start()
         cls._server = server
 
@@ -39,7 +39,7 @@ class TestClient(unittest.TestCase):
 
     def test_grpc_success(self):
         # Tests that the grpc client can connect correctly and issue an RPC
-        grpc_client = client.DnsClient(localhost', SERVER_PORT)
+        grpc_client = client.DnsClient('localhost', INSECURE_SERVER_PORT)
         response = grpc_client.request_dns_lookup('walmart.com')
         self.assertIsNotNone(response)
 
@@ -47,7 +47,7 @@ class TestClient(unittest.TestCase):
         # Tests failure, via an error in the gRPC status.
         # This should test for any gRPC error even though the one raised
         # INVALID_ARGUMENT.
-        grpc_client = client.DnsClient(localhost', SERVER_PORT)
+        grpc_client = client.DnsClient('localhost', INSECURE_SERVER_PORT)
         response = grpc_client.request_dns_lookup('DoesNotExist.Mapping.Foo')
         self.assertIsNone(response)
 
