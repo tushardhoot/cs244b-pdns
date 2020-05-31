@@ -16,9 +16,19 @@ Use the following command to run all unit tests:
 All of the unit tests will be in the `test/` directory.
 
 # TO RUN
+For an insecure channel:
 1. Launch your test server / backend (either ./simpe\_server.py or the javabackend)
 2. Run the runner.py here
 3. Send a request to the UDP port on localhost specifed that runner ran with (53 by default) -- I've serialized the request of a DNS query for 'walmart.com' if you want to test it with a real DNS query.
+
+For a secure channel:
+1. Run the Backend Server
+2. Runner the runner using `python3 client/runner.py --root_cert cert.pem --private_key key.pem`.
+Here the private\_key is the private key for the client and the root cert is
+the backend's certificate.
+3. Send a request to the UDP port the runner is servering on). You can do that using
+`cat walmart_test_query  > /dev/udp/127.0.0.1/53`
+
 
 You should see a request for walmart.com on the backend.
 
@@ -38,4 +48,3 @@ Run:
 The servers pk will be key.pem and the certificate cert.pem.
 
 You can use `openssl x509 -text -noout -in cert.pem` to inspect the cert.
-
