@@ -13,8 +13,6 @@ import dnslib
 
 
 logging.getLogger('').setLevel(logging.INFO)
-DEFAULT_SERVER_IP = '127.0.0.1'
-DEFAULT_SERVER_PORT = '8980'
 
 
 class DNSRequestHandler(socketserver.BaseRequestHandler):
@@ -79,11 +77,18 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Starts up the DNS client.')
 
     # Arguments for the P2P Backend Node
-    parser.add_argument('--backend_port', default=DEFAULT_SERVER_PORT,
+    parser.add_argument('--backend_port',
                         type=int,
-                        help='The port your DNS Server is running on.')
-    parser.add_argument('--backend_ip', default=DEFAULT_SERVER_IP,
+                        help='The port your DNS Server is running on. '
+                        'If not specified defaults to using the default '
+                        'secure or insecure channel.')
+    parser.add_argument('--backend_ip', default=client.DEFAULT_SERVER_IP,
                         help='The ip your DNS Server is running on.')
+    parser.add_argument('--root_cert',
+                        help='Path to the server pem file used to establish a '
+                        'secure channel (otherwise the channel is insecure.')
+    parser.add_argument('--private_key',
+                        help='Path to client pk used in mutual TLS')
 
     # Arguments for the local DNS service
     parser.add_argument('--port', default=53, type=int,
@@ -93,8 +98,30 @@ if __name__ == '__main__':
                         help='The timeout in seconds for DNS lookup requests.')
     args = parser.parse_args()
 
+    # Read contents of pem file for server backend secure connection
+    # if provided
+    root_cert = None
+    if args.root_cert:
+        with open(args.root_cert, 'rb') as f:
+            root_cert = f.read()
+
+    # Read private key if specified.
+    pk = None
+    if args.private_key:
+        with open(args.private_key, 'rb') as f:
+            pk = f.read()
+
+    # Determine backend port for server
+    backend_port = args.backend_port
+
+    if not backend_port:
+        if root_cert or pk:
+            backend_port = client.DEFAULT_SECURE_SERVER_PORT
+        else:
+            backend_port = client.DEFAULT_SERVER_PORT
+
     grpc_client = client.DnsClient(
-        None, args.backend_ip, args.backend_port, args.timeout)
+        args.backend_ip, backend_port, args.timeout, root_cert, pk)
     server_info = ('', args.port)
 
     # Launch the server.
