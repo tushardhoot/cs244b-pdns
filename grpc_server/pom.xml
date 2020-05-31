@@ -94,7 +94,7 @@
                 <configuration>
                     <archive>
                         <manifest>
-                            <mainClass>edu.cs244b.server.DomainLookupServer</mainClass>
+                            <mainClass>edu.cs244b.server</mainClass>
                         </manifest>
                     </archive>
                 </configuration>
