@@ -45,6 +45,8 @@ if __name__ == '__main__':
                         'secure channel (otherwise the channel is insecure.')
     parser.add_argument('--server_key',
                         help='Path to the server private key')
+    parser.add_argument('--require_auth', default=False, action='store_true',
+                        help='Whether we require the client to auth')
 
     args = parser.parse_args()
 
@@ -66,7 +68,11 @@ if __name__ == '__main__':
             pk = f.read()
         with open(args.server_pem, 'rb') as f:
             chain = f.read()
-        creds = grpc.ssl_server_credentials([(pk, chain)])
+        if args.require_auth:
+            # Require client to auth with same pk / cert as server.
+            creds = grpc.ssl_server_credentials([(pk, chain)], chain, True)
+        else:
+            creds = grpc.ssl_server_credentials([(pk, chain)])
         server.add_secure_port(
             'localhost:{}'.format(SECURE_SERVER_PORT), creds)
 
