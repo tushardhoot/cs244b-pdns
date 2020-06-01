@@ -43,7 +43,7 @@ def generate_dns_packet(request_pkt, hostname, ip_addresses):
 
     """
     request = DNSRecord.parse(request_pkt)
-    record_type = request.q.qtype
+    record_type = QTYPE.A
     response = request.reply()
 
     # TODO(kbaichoo): add flexible ttl
