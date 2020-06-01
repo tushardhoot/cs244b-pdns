@@ -42,8 +42,8 @@ class DnsClient:
         # If they specify a PK for themselves as well it'll be mutual TLS.
         if self.root_certs or self.pk or self.cert:
             creds = grpc.ssl_channel_credentials(
-                root_certificates=self.cert, private_key=self.pk,
-                certificate_chain=self.root_certs)
+                root_certificates=self.root_certs, private_key=self.pk,
+                certificate_chain=self.cert)
             self.channel = grpc.secure_channel(server_tuple, creds)
         else:
             self.channel = grpc.insecure_channel(server_tuple)
