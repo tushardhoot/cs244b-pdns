@@ -89,6 +89,8 @@ if __name__ == '__main__':
                         'secure channel (otherwise the channel is insecure.')
     parser.add_argument('--private_key',
                         help='Path to client pk used in mutual TLS')
+    parser.add_argument('--client_cert',
+                        help='Path to client cert used in mutual TLS')
 
     # Arguments for the local DNS service
     parser.add_argument('--port', default=53, type=int,
@@ -111,17 +113,23 @@ if __name__ == '__main__':
         with open(args.private_key, 'rb') as f:
             pk = f.read()
 
+    # Read certificate key if specified.
+    cert = None
+    if args.client_cert:
+        with open(args.client_cert, 'rb') as f:
+            cert = f.read()
+
     # Determine backend port for server
     backend_port = args.backend_port
 
     if not backend_port:
-        if root_cert or pk:
+        if root_cert or pk or cert:
             backend_port = client.DEFAULT_SECURE_SERVER_PORT
         else:
             backend_port = client.DEFAULT_SERVER_PORT
 
     grpc_client = client.DnsClient(
-        args.backend_ip, backend_port, args.timeout, root_cert, pk)
+        args.backend_ip, backend_port, args.timeout, root_cert, pk, cert)
     server_info = ('', args.port)
 
     # Launch the server.

@@ -23,12 +23,13 @@ DEFAULT_TIMEOUT_SECONDS = 5
 
 class DnsClient:
     def __init__(self, server_ip, server_port,
-                 timeout=DEFAULT_TIMEOUT_SECONDS, root_certs=None, pk=None):
+                 timeout=DEFAULT_TIMEOUT_SECONDS, root_certs=None, pk=None, cert=None):
         self.server_ip = server_ip
         self.server_port = server_port
         self.timeout = timeout
         self.root_certs = root_certs
         self.pk = pk
+        self.cert = cert
 
         # The channel used to communicate with the DNS server.
         logging.info(
@@ -39,9 +40,9 @@ class DnsClient:
         # The channels are thread safe.
         # Create a secure channel if the users specifies a root_cert.
         # If they specify a PK for themselves as well it'll be mutual TLS.
-        if self.root_certs or self.pk:
+        if self.root_certs or self.pk or self.cert:
             creds = grpc.ssl_channel_credentials(
-                root_certificates=self.root_certs, private_key=self.pk,
+                root_certificates=self.cert, private_key=self.pk,
                 certificate_chain=self.root_certs)
             self.channel = grpc.secure_channel(server_tuple, creds)
         else:
