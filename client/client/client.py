@@ -118,8 +118,14 @@ if __name__ == '__main__':
         with open(args.private_key, 'rb') as f:
             pk = f.read()
 
+    # Read private key if specified.
+    cert = None
+    if args.client_cert:
+        with open(args.client_cert, 'rb') as f:
+            cert = f.read()
+
     # Create the client object and test out some domains.
     client = DnsClient(args.backend_ip,
-                       backend_port, args.timeout, root_cert, pk)
+                       backend_port, args.timeout, root_cert, pk, cert)
     print(client.request_dns_lookup('walmart.com'))
     print(client.request_dns_lookup('facebook.com'))
