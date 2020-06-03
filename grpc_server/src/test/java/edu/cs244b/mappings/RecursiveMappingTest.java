@@ -59,6 +59,20 @@ public class RecursiveMappingTest {
     }
 
     @Test
+    public void isCaseInsensitive() {
+        RecursiveMapping mapping = new RecursiveMapping();
+        mapping.pushMapping(
+                CommonUtils.rDNSForm("facebook.com"),
+                new LookupResult(LookupResult.MappingType.DIRECT, "facebook.com", "1.2.3.4")
+        );
+
+        LookupResult result = mapping.lookup(CommonUtils.rDNSForm("FACEBook.com"));
+        assertNotNull(result);
+        assertEquals(LookupResult.MappingType.DIRECT, result.type);
+        assertEquals("1.2.3.4", result.value);
+    }
+
+    @Test
     public void returnsMostSpecificMapping() {
         RecursiveMapping mapping = new RecursiveMapping();
         mapping.pushMapping(

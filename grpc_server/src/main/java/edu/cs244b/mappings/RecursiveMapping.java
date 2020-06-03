@@ -23,7 +23,7 @@ public class RecursiveMapping {
             throw new RuntimeException("Pushed an empty mapping");
         }
 
-        String part = remainder.remove(0);
+        String part = remainder.remove(0).toLowerCase();
         if (remainder.isEmpty()) {
             if (subMappings.containsKey(part)) {
                 RecursiveMapping next = subMappings.get(part);
@@ -46,7 +46,7 @@ public class RecursiveMapping {
             return defaultValue;
         }
 
-        String nextPart = remainder.remove(0);
+        String nextPart = remainder.remove(0).toLowerCase();
         LookupResult result = null;
         if (subMappings.containsKey(nextPart)) {
             result = subMappings.get(nextPart).lookup(remainder);

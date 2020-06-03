@@ -13,7 +13,7 @@ public class LookupResult {
 
     public LookupResult(MappingType type, String hostname, String value) {
         this.type = type;
-        this.hostname = hostname;
+        this.hostname = hostname.toLowerCase();
         this.value = value;
     }
 
