@@ -4,18 +4,6 @@
     "resource": "dnsFallback"
   },
   "entries": [{
-    "hostName": "stanford.edu",
-    "ipAddress": "171.67.215.200"
-  }, {
-    "hostName": "amazon.com",
-    "ipAddress": "176.32.98.166"
-  }, {
-    "hostName": "facebook.com",
-    "ipAddress": "3.3.3.3"
-  }, {
-    "hostName": "usa.gov",
-    "ipAddress": "23.22.13.113"
-  }, {
     "hostName": "india.gov.in",
     "ipAddress": "164.100.61.151"
   }]
