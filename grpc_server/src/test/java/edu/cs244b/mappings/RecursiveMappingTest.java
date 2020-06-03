@@ -77,7 +77,9 @@ public class RecursiveMappingTest {
 
     @Test
     public void returnsDefaultMappingIfNoExactMatch() {
-        RecursiveMapping mapping = new RecursiveMapping();
+        RecursiveMapping mapping = new RecursiveMapping(
+                new LookupResult(LookupResult.MappingType.INDIRECT, "", "fallback")
+        );
         mapping.pushMapping(
                 CommonUtils.rDNSForm("com"),
                 new LookupResult(LookupResult.MappingType.INDIRECT, "com", "icann")
@@ -90,5 +92,9 @@ public class RecursiveMappingTest {
         LookupResult result = mapping.lookup(CommonUtils.rDNSForm("google.com"));
         assertNotNull(result);
         assertEquals("icann", result.value);
+
+        result = mapping.lookup(CommonUtils.rDNSForm("google.org"));
+        assertNotNull(result);
+        assertEquals("fallback", result.value);
     }
 }
