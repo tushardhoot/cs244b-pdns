@@ -59,6 +59,20 @@ public class RecursiveMappingTest {
     }
 
     @Test
+    public void isCaseInsensitive() {
+        RecursiveMapping mapping = new RecursiveMapping();
+        mapping.pushMapping(
+                CommonUtils.rDNSForm("facebook.com"),
+                new LookupResult(LookupResult.MappingType.DIRECT, "facebook.com", "1.2.3.4")
+        );
+
+        LookupResult result = mapping.lookup(CommonUtils.rDNSForm("FACEBook.com"));
+        assertNotNull(result);
+        assertEquals(LookupResult.MappingType.DIRECT, result.type);
+        assertEquals("1.2.3.4", result.value);
+    }
+
+    @Test
     public void returnsMostSpecificMapping() {
         RecursiveMapping mapping = new RecursiveMapping();
         mapping.pushMapping(
@@ -77,7 +91,9 @@ public class RecursiveMappingTest {
 
     @Test
     public void returnsDefaultMappingIfNoExactMatch() {
-        RecursiveMapping mapping = new RecursiveMapping();
+        RecursiveMapping mapping = new RecursiveMapping(
+                new LookupResult(LookupResult.MappingType.INDIRECT, "", "fallback")
+        );
         mapping.pushMapping(
                 CommonUtils.rDNSForm("com"),
                 new LookupResult(LookupResult.MappingType.INDIRECT, "com", "icann")
@@ -90,5 +106,9 @@ public class RecursiveMappingTest {
         LookupResult result = mapping.lookup(CommonUtils.rDNSForm("google.com"));
         assertNotNull(result);
         assertEquals("icann", result.value);
+
+        result = mapping.lookup(CommonUtils.rDNSForm("google.org"));
+        assertNotNull(result);
+        assertEquals("fallback", result.value);
     }
 }

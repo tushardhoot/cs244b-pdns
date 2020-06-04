@@ -11,17 +11,14 @@ import java.io.InputStreamReader;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 public class JSONMappingStore implements MappingStore {
 
     private final URL path;
-    private final RecursiveMapping resolver;
+    private RecursiveMapping resolver;
 
     public JSONMappingStore(URL path) {
         this.path = path;
-        this.resolver = new RecursiveMapping();
     }
 
     @Override
@@ -37,6 +34,13 @@ public class JSONMappingStore implements MappingStore {
         Gson gson = new Gson();
         JSONMappings jsonMappings = gson.fromJson(reader, JSONMappings.class);
 
+        if (jsonMappings.fallback != null) {
+            LookupResult result = validResultOrThrow(jsonMappings.fallback, true);
+            this.resolver = new RecursiveMapping(result);
+        } else {
+            this.resolver = new RecursiveMapping();
+        }
+
         jsonMappings.entries.stream()
                 .map(JSONMappingStore::validResultOrThrow)
                 .forEach(result -> resolver.pushMapping(CommonUtils.rDNSForm(result.hostname), result));
@@ -48,7 +52,11 @@ public class JSONMappingStore implements MappingStore {
     }
 
     private static LookupResult validResultOrThrow(Entry entry) {
-        if (NullOrEmpty.isTrue(entry.hostName)) {
+        return validResultOrThrow(entry, false);
+    }
+
+    private static LookupResult validResultOrThrow(Entry entry, boolean isFallback) {
+        if (!isFallback && NullOrEmpty.isTrue(entry.hostName)) {
             throw new RuntimeException("mapping with no hostname");
         }
 
@@ -76,6 +84,7 @@ public class JSONMappingStore implements MappingStore {
     }
 
     private static class JSONMappings {
+        private Entry fallback;
         private List<Entry> entries;
     }
 }

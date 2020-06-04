@@ -1,9 +1,9 @@
 {
   "hosts": [
     {
-      "name": "usgov",
-      "ip_address": "1.2.3.4",
-      "port": 8090
+      "name": "dnsFallback",
+      "ip_address": "35.209.8.236",
+      "port": 8980
     }
   ]
 }

@@ -204,18 +204,20 @@ public class DomainLookupServer {
             if (lookupResult.getType() == LookupResult.MappingType.INDIRECT) {
                 if (remainingHops > ServerUtils.ZERO) {
                     try {
-                        dnsRecordP2P = indirectResolution(lookupResult, remainingHops);
+                        dnsRecordP2P = indirectResolution(message.getHostName(), lookupResult, remainingHops);
                     } catch (StatusRuntimeException sre) {
                         switch (sre.getStatus().getCode()) {
                             case NOT_FOUND:
                                 status = Status.NOT_FOUND;
                                 break;
                             default:
+                                logger.error("StatusRuntimeException error", sre);
                                 status = Status.INTERNAL;
                         }
                     } catch (SSLException ssle) {
                         status = Status.UNAUTHENTICATED;
                     } catch (Exception ex) {
+                        logger.error("resolveDNSInfo error", ex);
                         status = Status.INTERNAL;
                     }
                 } else {
@@ -224,15 +226,17 @@ public class DomainLookupServer {
                     logger.info("Max hops breached for host name: {}", message.getHostName());
                 }
             } else {
-                dnsRecordP2P = buildP2PResponse(lookupResult);
+                dnsRecordP2P = buildP2PResponse(message.getHostName(), lookupResult);
             }
 
             dnsCache.registerDnsRecord(dnsRecordP2P);
             return Pair.of(status, dnsRecordP2P);
         }
 
-        private DNSRecordP2P indirectResolution(final LookupResult lookupResult,
-                                                final int remainingHops) throws Exception {
+        private DNSRecordP2P indirectResolution(
+                final String hostname,
+                final LookupResult lookupResult,
+                final int remainingHops) throws Exception {
             final String peerName = lookupResult.getValue();
             if (!peers.containsKey(peerName)) {
                 throw new StatusException(Status.INTERNAL);
@@ -242,16 +246,16 @@ public class DomainLookupServer {
             return peer.getStub(sslCertBaseDirectory)
                     .getDomainP2P(P2PMessage.newBuilder()
                             .setMessage(Message.newBuilder()
-                                    .setHostName(lookupResult.getHostname()).build())
+                                    .setHostName(hostname).build())
                             .setHopCount(remainingHops - 1)
                             .build());
         }
 
-        private DNSRecordP2P buildP2PResponse(final LookupResult result) {
+        private DNSRecordP2P buildP2PResponse(final String hostname, final LookupResult result) {
             final DNSRecordP2P.Builder builder = DNSRecordP2P.newBuilder();
             if (result != null) {
                 final DNSRecord dnsRecord = DNSRecord.newBuilder()
-                        .setHostName(result.getHostname())
+                        .setHostName(hostname)
                         .addIpAddresses(result.getValue())
                         .build();
                 builder.setDnsRecord(dnsRecord)

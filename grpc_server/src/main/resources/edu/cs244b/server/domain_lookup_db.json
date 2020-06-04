@@ -1,24 +1,10 @@
 {
+  "fallback": {
+    "hostName": "",
+    "resource": "dnsFallback"
+  },
   "entries": [{
-    "hostName": "google.com",
-    "ipAddress": "1.1.1.1"
-  }, {
-    "hostName": "amazon.com",
-    "ipAddress": "2.2.2.2"
-  }, {
-    "hostName": "facebook.com",
-    "ipAddress": "3.3.3.3"
-  }, {
-    "hostName": "vmware.com",
-    "ipAddress": "4.4.4.4"
-  }, {
-    "hostName": "flipkart.com",
-    "ipAddress": "5.5.5.5"
-  }, {
-    "hostName": "walmart.com",
-    "ipAddress": "6.6.6.6"
-  }, {
-    "hostName": "usa.gov",
-    "resource": "usgov"
+    "hostName": "india.gov.in",
+    "ipAddress": "164.100.61.151"
   }]
 }
