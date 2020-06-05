@@ -1,5 +1,6 @@
 package edu.cs244b.server;
 
+import com.google.common.collect.Lists;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import sun.security.provider.X509Factory;
@@ -11,6 +12,7 @@ import java.io.FileReader;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.util.Base64;
+import java.util.List;
 
 class CertificateReader {
     private static final Logger logger = LoggerFactory.getLogger(CertificateReader.class);
@@ -25,6 +27,7 @@ class CertificateReader {
     static final String CLIENT = "client";
     static final String SERVER = "server";
     static final String TRUSTED_CONTACTS = "trusted_contacts";
+    static final String SUPPORTED_CLIENTS_MUTUAL_TLS = "supported_clients_mutual_tls";
     static final String CERTIFICATE_FILENAME = "cert.pem";
     static final String KEY = "key.pem";
 
@@ -36,7 +39,7 @@ class CertificateReader {
         return new File(certBaseDirectory + File.separator + SERVER + File.separator + KEY);
     }
 
-    public static X509Certificate getClientCertificateAuthorities(final String certBaseDirectory) {
+    private static X509Certificate getSelfClientCertificateAuthority(final String certBaseDirectory) {
         X509Certificate certificate = null;
         try {
             certificate = parseCertificate(certBaseDirectory + File.separator + CLIENT + File.separator + CERTIFICATE_FILENAME);
@@ -46,18 +49,39 @@ class CertificateReader {
         return certificate;
     }
 
-    public static X509Certificate getServerCertificateAuthorities(final String certBaseDirectory,
-                                                                  final String peerName) {
-        final String peerCertFilePath = certBaseDirectory + File.separator + TRUSTED_CONTACTS + File.separator + peerName + File.separator + CERTIFICATE_FILENAME;
-        if (new File(peerCertFilePath).exists()) {
-            try {
-                return parseCertificate(peerCertFilePath);
-            } catch (Exception ex) {
-                logger.info("Error while parsing certificate for trusted contact {}", peerName, ex);
+    public static List<X509Certificate> getClientCertificateAuthorities(final String certBaseDirectory) {
+        final List<X509Certificate> certificates = Lists.newArrayList();
+        certificates.add(getSelfClientCertificateAuthority(certBaseDirectory));
+
+        final String baseDirTrustedContacts = certBaseDirectory + File.separator + SUPPORTED_CLIENTS_MUTUAL_TLS;
+        final File[] trustedContacts = new File(baseDirTrustedContacts).listFiles();
+        if (trustedContacts != null) {
+            for (final File trustedContact : trustedContacts) {
+                if (trustedContact.isDirectory()) {
+                    try {
+                        final String clientCertFile = trustedContact.getAbsolutePath() + File.separator + CERTIFICATE_FILENAME;
+                        certificates.add(parseCertificate(clientCertFile));
+                        logger.info("Added client certificate: {}", clientCertFile);
+                    } catch (Exception ex) {
+                        logger.info("Error while parsing certificate for trusted contact {}", trustedContact.getName(), ex);
+                    }
+                }
             }
         }
 
-        return null;
+        return certificates;
+    }
+
+    public static X509Certificate getServerCertificateAuthority(final String certBaseDirectory,
+                                                                final String peerName) {
+        final String peerCertFilePath = certBaseDirectory + File.separator + TRUSTED_CONTACTS + File.separator + peerName + File.separator + CERTIFICATE_FILENAME;
+        X509Certificate certificate = null;
+        try {
+            certificate = parseCertificate(peerCertFilePath);
+        } catch (Exception ex) {
+            logger.info("Error while parsing certificate for trusted contact {}", peerName, ex);
+        }
+        return certificate;
     }
 
     private static X509Certificate parseCertificate(final String certFile) throws Exception {
