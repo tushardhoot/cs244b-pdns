@@ -61,6 +61,8 @@ class CertificateReader {
     }
 
     private static X509Certificate parseCertificate(final String certFile) throws Exception {
+        logger.info("Parsing certificate: {}", certFile);
+
         // Read key from file
         final StringBuilder certStr = new StringBuilder();
         final BufferedReader br = new BufferedReader(new FileReader(certFile));
@@ -77,6 +79,7 @@ class CertificateReader {
         //byte [] decoded = Base64.getDecoder().decode(cert);
         byte [] decoded = Base64.getMimeDecoder().decode(cert);
 
+        logger.info("Certificate: {}", cert);
         return (X509Certificate) CertificateFactory.getInstance("X.509").generateCertificate(new ByteArrayInputStream(decoded));
     }
 }
