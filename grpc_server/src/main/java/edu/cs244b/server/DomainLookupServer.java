@@ -243,7 +243,7 @@ public class DomainLookupServer {
             }
 
             final Peer peer = peers.get(peerName);
-            return peer.getStub(sslCertBaseDirectory)
+            return peer.getStub(sslCertBaseDirectory, peer.getName())
                     .getDomainP2P(P2PMessage.newBuilder()
                             .setMessage(Message.newBuilder()
                                     .setHostName(hostname).build())

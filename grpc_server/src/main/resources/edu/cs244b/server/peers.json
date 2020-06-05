@@ -4,6 +4,10 @@
       "name": "dnsFallback",
       "ip_address": "35.209.8.236",
       "port": 8980
+    }, {
+      "name": "ec2_walmart",
+      "ip_address": "ec2-3-133-102-2.us-east-2.compute.amazonaws.com",
+      "port": 9000
     }
   ]
 }

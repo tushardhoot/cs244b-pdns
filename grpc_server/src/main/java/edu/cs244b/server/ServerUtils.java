@@ -94,10 +94,10 @@ public class ServerUtils {
         return false;
     }
 
-    public static SslContext getClientSSLContext(final String certBaseDirectory) throws Exception {
+    public static SslContext getClientSSLContext(final String certBaseDirectory, final String peerName) throws Exception {
         return GrpcSslContexts.forClient()
                 // trustManager - used for verifying server the server's certificate
-                .trustManager(CertificateReader.getServerCertificateAuthorities(certBaseDirectory))
+                .trustManager(CertificateReader.getServerCertificateAuthorities(certBaseDirectory, peerName))
                 // keyManager - cert chain & key for client's certificate
                 .keyManager(CertificateReader.getCertificateChain(certBaseDirectory), CertificateReader.getKey(certBaseDirectory))
                 .build();

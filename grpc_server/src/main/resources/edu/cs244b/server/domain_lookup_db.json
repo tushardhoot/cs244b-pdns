@@ -6,5 +6,8 @@
   "entries": [{
     "hostName": "india.gov.in",
     "ipAddress": "164.100.61.151"
+  }, {
+    "hostName": "walmart.com",
+    "resource": "ec2_walmart"
   }]
 }

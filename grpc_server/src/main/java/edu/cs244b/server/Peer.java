@@ -36,11 +36,12 @@ public class Peer {
         return port;
     }
 
-    DomainLookupServiceBlockingStub getStub(final String certBaseDirectory) throws Exception {
+    DomainLookupServiceBlockingStub getStub(final String certBaseDirectory, final String peerName) throws Exception {
         if (stub == null) {
             stub = DomainLookupServiceGrpc.newBlockingStub(NettyChannelBuilder.forAddress(ip_address, port)
+                    //.overrideAuthority("3.133.102.2")
                     .negotiationType(NegotiationType.TLS)
-                    .sslContext(ServerUtils.getClientSSLContext(certBaseDirectory)).build());
+                    .sslContext(ServerUtils.getClientSSLContext(certBaseDirectory, peerName)).build());
         }
 
         return stub;

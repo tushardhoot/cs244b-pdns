@@ -271,11 +271,4 @@ public class DomainLookupServerTest {
         assertEquals(0, reply.getIpAddressesCount());
         assertTrue(reply.getHostName().isEmpty());
     }
-
-    @Test
-    @Ignore
-    public void testCertificates() throws Exception {
-        CertificateReader.getClientCertificateAuthorities(cert_base_dir);
-        CertificateReader.getServerCertificateAuthorities(cert_base_dir);
-    }
 }
