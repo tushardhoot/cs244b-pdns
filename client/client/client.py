@@ -23,12 +23,13 @@ DEFAULT_TIMEOUT_SECONDS = 5
 
 class DnsClient:
     def __init__(self, server_ip, server_port,
-                 timeout=DEFAULT_TIMEOUT_SECONDS, root_certs=None, pk=None):
+                 timeout=DEFAULT_TIMEOUT_SECONDS, root_certs=None, pk=None, cert=None):
         self.server_ip = server_ip
         self.server_port = server_port
         self.timeout = timeout
         self.root_certs = root_certs
         self.pk = pk
+        self.cert = cert
 
         # The channel used to communicate with the DNS server.
         logging.info(
@@ -39,10 +40,10 @@ class DnsClient:
         # The channels are thread safe.
         # Create a secure channel if the users specifies a root_cert.
         # If they specify a PK for themselves as well it'll be mutual TLS.
-        if self.root_certs or self.pk:
+        if self.root_certs or self.pk or self.cert:
             creds = grpc.ssl_channel_credentials(
                 root_certificates=self.root_certs, private_key=self.pk,
-                certificate_chain=self.root_certs)
+                certificate_chain=self.cert)
             self.channel = grpc.secure_channel(server_tuple, creds)
         else:
             self.channel = grpc.insecure_channel(server_tuple)
@@ -117,8 +118,14 @@ if __name__ == '__main__':
         with open(args.private_key, 'rb') as f:
             pk = f.read()
 
+    # Read private key if specified.
+    cert = None
+    if args.client_cert:
+        with open(args.client_cert, 'rb') as f:
+            cert = f.read()
+
     # Create the client object and test out some domains.
     client = DnsClient(args.backend_ip,
-                       backend_port, args.timeout, root_cert, pk)
+                       backend_port, args.timeout, root_cert, pk, cert)
     print(client.request_dns_lookup('walmart.com'))
     print(client.request_dns_lookup('facebook.com'))

@@ -6,6 +6,10 @@ import com.google.protobuf.util.JsonFormat;
 import edu.cs244b.common.DNSRecord;
 import edu.cs244b.common.DNSRecordP2P;
 import edu.cs244b.common.NullOrEmpty;
+import io.grpc.netty.shaded.io.grpc.netty.GrpcSslContexts;
+import io.grpc.netty.shaded.io.netty.handler.ssl.ClientAuth;
+import io.grpc.netty.shaded.io.netty.handler.ssl.SslContext;
+import io.grpc.netty.shaded.io.netty.handler.ssl.SslContextBuilder;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -19,10 +23,9 @@ import java.util.stream.Collectors;
 
 public class ServerUtils {
 
-    public static int ZERO = 0;
-    public static int ONE = 1;
-    public static int MAX_HOP_ALLOWED = 32;
-    public static String DNS_STATE_SUFFIX = "/state/dns_state";
+    public static final int ZERO = 0;
+    public static final int MAX_HOP_ALLOWED = 32;
+    public static final String DNS_STATE_SUFFIX = "/state/dns_state";
 
     /**
      * Gets the default mapping file from classpath.
@@ -51,7 +54,7 @@ public class ServerUtils {
         Gson gson = new Gson();
         Peers peers = gson.fromJson(reader, Peers.class);
 
-        return peers.hosts.stream().collect(Collectors.toMap(p -> p.getName(), Function.identity()));
+        return peers.hosts.stream().collect(Collectors.toMap(Peer::getName, Function.identity()));
     }
 
     public static ServerOperationalConfig getServerOpConfig() {
@@ -84,13 +87,30 @@ public class ServerUtils {
     public static boolean isDNSRecordValid(final DNSRecordP2P dnsRecordP2P) {
         if (dnsRecordP2P != null) {
             final DNSRecord dnsRecord = dnsRecordP2P.getDnsRecord();
-            if (dnsRecord != null
-                    && NullOrEmpty.isFalse(dnsRecord.getHostName())             /* host name is valid */
-                    && dnsRecord.getIpAddressesCount() > 0) {                   /* has ip address */
-                return true;
-            }
+            return dnsRecord != null
+                    && NullOrEmpty.isFalse(dnsRecord.getHostName())
+                    && dnsRecord.getIpAddressesCount() > 0;
         }
         return false;
+    }
+
+    public static SslContext getClientSSLContext(final String certBaseDirectory, final String peerName) throws Exception {
+        return GrpcSslContexts.forClient()
+                // trustManager - used for verifying server the server's certificate
+                .trustManager(CertificateReader.getServerCertificateAuthority(certBaseDirectory, peerName))
+                // keyManager - cert chain & key for client's certificate
+                .keyManager(CertificateReader.getCertificateChain(certBaseDirectory), CertificateReader.getKey(certBaseDirectory))
+                .build();
+    }
+
+    public static SslContext getServerSSLContext(final ServerOperationalConfig serverOpConfig) throws Exception {
+        String certBaseDir = serverOpConfig.getSslCertBaseLocation();
+        SslContextBuilder builder = GrpcSslContexts.forServer(CertificateReader.getCertificateChain(certBaseDir), CertificateReader.getKey(certBaseDir));
+        if (serverOpConfig.getMutualTlsEnabled()) {
+            builder.trustManager(CertificateReader.getClientCertificateAuthorities(certBaseDir));
+            builder.clientAuth(ClientAuth.REQUIRE);
+        }
+        return builder.build();
     }
 
     static class Peers {

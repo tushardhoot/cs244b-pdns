@@ -2,7 +2,9 @@ package edu.cs244b.server;
 
 import edu.cs244b.common.DomainLookupServiceGrpc;
 import edu.cs244b.common.DomainLookupServiceGrpc.DomainLookupServiceBlockingStub;
-import io.grpc.ManagedChannelBuilder;
+import io.grpc.netty.shaded.io.grpc.netty.NegotiationType;
+import io.grpc.netty.shaded.io.grpc.netty.NettyChannelBuilder;
+
 
 public class Peer {
     private final String name;
@@ -34,10 +36,12 @@ public class Peer {
         return port;
     }
 
-    DomainLookupServiceBlockingStub getStub() {
+    DomainLookupServiceBlockingStub getStub(final String certBaseDirectory, final String peerName) throws Exception {
         if (stub == null) {
-            ManagedChannelBuilder<?> mcb = ManagedChannelBuilder.forAddress(ip_address, port).usePlaintext();
-            stub = DomainLookupServiceGrpc.newBlockingStub(mcb.build());
+            stub = DomainLookupServiceGrpc.newBlockingStub(NettyChannelBuilder.forAddress(ip_address, port)
+                    //.overrideAuthority("3.133.102.2")
+                    .negotiationType(NegotiationType.TLS)
+                    .sslContext(ServerUtils.getClientSSLContext(certBaseDirectory, peerName)).build());
         }
 
         return stub;

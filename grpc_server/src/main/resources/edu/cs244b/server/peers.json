@@ -4,6 +4,10 @@
       "name": "dnsFallback",
       "ip_address": "35.209.8.236",
       "port": 8980
+    }, {
+      "name": "china",
+      "ip_address": "3.133.102.2",
+      "port": 9000
     }
   ]
 }

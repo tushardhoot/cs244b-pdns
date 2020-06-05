@@ -3,17 +3,18 @@ package edu.cs244b.server;
 import edu.cs244b.common.DNSRecord;
 import edu.cs244b.common.DomainLookupServiceGrpc;
 import edu.cs244b.common.DomainLookupServiceGrpc.DomainLookupServiceBlockingStub;
+import edu.cs244b.server.DomainLookupServer.DomainLookupService;
 import edu.cs244b.common.Message;
 import edu.cs244b.mappings.ConstantsMappingStore;
 import edu.cs244b.mappings.LookupResult;
 import edu.cs244b.mappings.MappingStore;
-import edu.cs244b.server.DomainLookupServer.DomainLookupService;
 import io.grpc.StatusRuntimeException;
 import io.grpc.inprocess.InProcessChannelBuilder;
 import io.grpc.inprocess.InProcessServerBuilder;
 
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -36,6 +37,7 @@ public class DomainLookupServerTest {
 
     private static final String uuid = UUID.randomUUID().toString();
     private static final String empty_dns_state_file_path = "/tmp/empty_dns_state_" + uuid;
+    private static final String cert_base_dir = "/var/cs244b.p2p.dns/ssl_certificates";
 
     @Rule
     public final GrpcCleanupRule grpcCleanup = new GrpcCleanupRule();
@@ -59,7 +61,8 @@ public class DomainLookupServerTest {
         String serverName = InProcessServerBuilder.generateName();
         final ServerOperationalConfig config = ServerOperationalConfig.newBuilder()
                 .setDnsExpiryDays(3).setMaxHopCount(2).setDnsCacheCapacity(50).setDnsStateFileLocation("/tmp/")
-                .setPermissableHostNameLength(50).build();
+                .setMutualTlsEnabled(true).setSslCertBaseLocation(cert_base_dir)
+                .setPermissibleHostNameLength(50).build();
         grpcCleanup.register(
                 InProcessServerBuilder.forName(serverName)
                         .directExecutor().addService(
@@ -204,7 +207,8 @@ public class DomainLookupServerTest {
     public void testMaxHopCountLimitPass() throws Exception {
         final ServerOperationalConfig config = ServerOperationalConfig.newBuilder()
                 .setDnsExpiryDays(3).setMaxHopCount(2).setDnsCacheCapacity(50).setDnsStateFileLocation("/tmp/")
-                .setPermissableHostNameLength(50).build();
+                .setMutualTlsEnabled(true).setSslCertBaseLocation(cert_base_dir)
+                .setPermissibleHostNameLength(50).build();
 
         // Setup peer-peer
         final Set<LookupResult> friendFriendServerMappings = Collections.singleton(
@@ -237,7 +241,9 @@ public class DomainLookupServerTest {
     public void testMaxHopCountLimitFail() throws Exception {
         final ServerOperationalConfig config = ServerOperationalConfig.newBuilder()
                 .setDnsExpiryDays(3).setMaxHopCount(1).setDnsCacheCapacity(50).setDnsStateFileLocation("/tmp/")
-                .setPermissableHostNameLength(50).build();
+                .setPermissibleHostNameLength(50)
+                .setMutualTlsEnabled(true).setSslCertBaseLocation(cert_base_dir)
+                .build();
 
         // Setup peer-peer
         final Set<LookupResult> friendFriendServerMappings = Collections.singleton(
