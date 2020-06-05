@@ -4,9 +4,6 @@
     "resource": "dnsFallback"
   },
   "entries": [{
-    "hostName": "india.gov.in",
-    "ipAddress": "164.100.61.151"
-  }, {
     "hostName": "google.com",
     "ipAddress": "216.58.197.46"
   }, {
@@ -17,6 +14,9 @@
     "resource": "china"
   }, {
     "hostName": "stanford.edu",
+    "resource": "china"
+  }, {
+    "hostName": "walmart.com",
     "resource": "china"
   }]
 }

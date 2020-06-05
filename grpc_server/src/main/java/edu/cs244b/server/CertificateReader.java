@@ -18,12 +18,39 @@ class CertificateReader {
     private static final Logger logger = LoggerFactory.getLogger(CertificateReader.class);
 
     /*
-     * openssl req -newkey rsa:2048 -new -nodes -x509 -days 3650 -keyout key.pem -out cert.pem
-     * generate the private key and ssl certificate
-     * server certificate: /var/cs244b.p2p.dns/ssl_cert/server
-     * client certificate: /var/cs244b.p2p.dns/ssl_cert/client
-     * trusted contacts certificate: /var/cs244b.p2p.dns/ssl_cert/trusted_contacts/<contact_id>
+     * sudo openssl req -newkey rsa:2048 -new -nodes -x509 -days 3650 -keyout key.pem -out cert.pem -config ../ssl_req.conf -extensions 'v3_req'
+     * contents of the ssl_req.conf file (edit IP.2 to relevant public IP for hostname verification when connection is made using IP)
+        [req]
+        distinguished_name = req_distinguished_name
+        x509_extensions = v3_req
+        prompt = no
+        [req_distinguished_name]
+        C = IN
+        ST = MH
+        L = PUNE
+        O = Stanford
+        OU = CS244B
+        CN = localhost
+        [v3_req]
+        keyUsage = keyEncipherment, dataEncipherment
+        extendedKeyUsage = serverAuth
+        subjectAltName = @alt_names
+        [alt_names]
+        email = cs244b@stanford.com
+        IP.1 = 127.0.0.1
+        IP.2 = 3.133.102.2
+
+     * Generate the private key and ssl certificates using the above command in below server & client directories
+     * server certificate: /var/cs244b.p2p.dns/ssl_certificates/server
+     * client certificate: /var/cs244b.p2p.dns/ssl_certificates/client
+
+     * Add trusted contacts certificate in below directory with node name as defined in peers.json
+     * trusted contacts certificate: /var/cs244b.p2p.dns/ssl_cert/trusted_contacts/<peer node name>
+
+     * Add client certificates of all peer node - Needed for mutual tls where server is also verifying the client certificate
+     * client certificates for mutual tls: /var/cs244b.p2p.dns/ssl_cert/supported_clients_mutual_tls/<client node name>
      */
+
     static final String CLIENT = "client";
     static final String SERVER = "server";
     static final String TRUSTED_CONTACTS = "trusted_contacts";
@@ -100,7 +127,6 @@ class CertificateReader {
         final String cert = certStr.toString()
                 .replaceAll(X509Factory.BEGIN_CERT, "")
                 .replaceAll(X509Factory.END_CERT, "");
-        //byte [] decoded = Base64.getDecoder().decode(cert);
         byte [] decoded = Base64.getMimeDecoder().decode(cert);
 
         logger.info("Certificate: {}", cert);
