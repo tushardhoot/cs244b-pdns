@@ -42,8 +42,13 @@ For example the simple server / the cert and key in the directory uses localhost
 If the hostname doesn't work, gRPC will reject the query.
 
 # TO GENERATE CERTS
-Run:
+Without Same Alternative Naming (SAN) run:
 `openssl req -newkey rsa:2048 -new -nodes -x509 -days 3650 -keyout key.pem -out cert.pem`
+
+With SAN you can do the following:
+1. Edit the `req.conf` file and specify the IP addresses owned (i.e. IP.1=X.X.X.X)
+using the IP of the host that'll own this cert.
+2. `openssl req -x509 -nodes -days 730 -newkey rsa:2048 -keyout key.pem -out cert.pem -config req.conf -extensions 'v3_req'`
 
 The servers pk will be key.pem and the certificate cert.pem.
 
