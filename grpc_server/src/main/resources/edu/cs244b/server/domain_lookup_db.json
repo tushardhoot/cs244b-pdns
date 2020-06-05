@@ -7,7 +7,16 @@
     "hostName": "india.gov.in",
     "ipAddress": "164.100.61.151"
   }, {
-    "hostName": "walmart.com",
-    "resource": "ec2_walmart"
+    "hostName": "google.com",
+    "ipAddress": "216.58.197.46"
+  }, {
+    "hostName": "facebook.com",
+    "resource": "china"
+  }, {
+    "hostName": "twitter.com",
+    "resource": "china"
+  }, {
+    "hostName": "stanford.edu",
+    "resource": "china"
   }]
 }
