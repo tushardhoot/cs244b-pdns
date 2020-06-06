@@ -1,3 +1,46 @@
+--------------------------------------------------------------------------------------------------------------------------------
+CREATE BASE DIRECTORIES
+--------------------------------------------------------------------------------------------------------------------------------
+sudo mkdir -p /var/cs244b.p2p.dns/state
+sudo mkdir -p /var/cs244b.p2p.dns/ssl_certificates/server
+sudo mkdir -p /var/cs244b.p2p.dns/ssl_certificates/client
+sudo mkdir -p /var/cs244b.p2p.dns/ssl_certificates/trusted_contacts
+sudo mkdir -p /var/cs244b.p2p.dns/ssl_certificates/supported_clients_mutual_tls
+
+--------------------------------------------------------------------------------------------------------------------------------
+STEPS TO CREATE SELF SIGNED CERTIFICATES
+--------------------------------------------------------------------------------------------------------------------------------
+cd /var/cs244b.p2p.dns/ssl_certificates
+sudo vi ssl_req.conf
+	[req]
+	distinguished_name = req_distinguished_name
+	x509_extensions = v3_req
+	prompt = no
+	[req_distinguished_name]
+	C = IN
+	ST = MH
+	L = PUNE
+	O = Stanford
+	OU = CS244B
+	CN = localhost
+	[v3_req]
+	keyUsage = keyEncipherment, dataEncipherment
+	extendedKeyUsage = serverAuth
+	subjectAltName = @alt_names
+	[alt_names]
+	email = cs244b@stanford.com
+	IP.1 = 127.0.0.1
+	IP.2 = 3.133.102.2 ----> Change it to public static IP of your server
+
+CREATE CERTICATE
+sudo openssl req -newkey rsa:2048 -new -nodes -x509 -days 3650 -keyout key.pem -out cert.pem -config ~/git/cs244b/ssl_certs/ssl_req.conf -extensions 'v3_req'
+
+READ CERTIFICATE
+openssl x509 -noout -text -in cert.pem
+
+--------------------------------------------------------------------------------------------------------------------------------
+BACKEND SERVER DETAILS
+--------------------------------------------------------------------------------------------------------------------------------
 1) Make a local copy of server.op.config, peers.json & domain_lookup_db.json
 /var/cs244b.p2p.dns/server_local.op.config
 /var/cs244b.p2p.dns/peers_local.json
@@ -32,3 +75,5 @@ The below certificates/keys are not needed by client in case the 'secureConnecti
 root_cert: needed to authenticate the server using TLS
 private_key: needed for TLS
 client_cert: needed by the server for mutual TLS
+
+--------------------------------------------------------------------------------------------------------------------------------
