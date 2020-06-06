@@ -21,8 +21,11 @@ message ServerOperationalConfig {
     int32 dnsCacheCapacity = 3;
     int32 permissibleHostNameLength = 4;
     string dnsStateFileLocation = 5;
-    bool mutualTlsEnabled = 6;
-    string sslCertBaseLocation = 7;
+    bool secureConnection = 6;
+    bool mutualTlsEnabled = 7;
+    string peers = 8;
+    string domainMapping = 9;
+    string sslCertBaseLocation = 10;
 }
 
 message DNSCacheProto {
