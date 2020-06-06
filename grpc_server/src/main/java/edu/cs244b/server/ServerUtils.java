@@ -35,16 +35,16 @@ public class ServerUtils {
         return CommonUtils.getUrl(domainMapping);
     }
 
-    public static URL defaultPeerList(final String peers) {
-        return CommonUtils.getUrl(peers);
+    public static URL defaultPeerList(final String trustedPeersFilePath) {
+        return CommonUtils.getUrl(trustedPeersFilePath);
     }
 
     /**
      * Parses the JSON input file containing the list of hostName to ipAddress mappings.
      */
-    public static Map<String, Peer> loadPeers(final String trustedPeers) {
+    public static Map<String, Peer> loadPeers(final String trustedPeersFilePath) {
         InputStream inputStream;
-        final URL path = defaultPeerList(trustedPeers);
+        final URL path = defaultPeerList(trustedPeersFilePath);
         try {
             inputStream = path.openStream();
         } catch (IOException e) {
