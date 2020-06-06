@@ -2,7 +2,10 @@ package edu.cs244b.common;
 
 import sun.net.util.IPAddressUtil;
 
+import java.io.File;
 import java.net.InetAddress;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
@@ -30,5 +33,15 @@ public class CommonUtils {
         List<String> parts = new LinkedList<>(Arrays.asList(hostname.split("\\.")));
         Collections.reverse(parts);
         return parts;
+    }
+
+    public static URL getUrl(final String fileName) {
+        URL url;
+        try {
+            url = new File(fileName).toURI().toURL();
+        } catch (MalformedURLException e) {
+            throw new RuntimeException(String.format("Malformed Url: %s", fileName));
+        }
+        return url;
     }
 }

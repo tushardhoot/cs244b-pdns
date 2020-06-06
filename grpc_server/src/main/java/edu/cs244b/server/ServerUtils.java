@@ -3,6 +3,7 @@ package edu.cs244b.server;
 import com.google.gson.Gson;
 import com.google.gson.stream.JsonReader;
 import com.google.protobuf.util.JsonFormat;
+import edu.cs244b.common.CommonUtils;
 import edu.cs244b.common.DNSRecord;
 import edu.cs244b.common.DNSRecordP2P;
 import edu.cs244b.common.NullOrEmpty;
@@ -30,20 +31,20 @@ public class ServerUtils {
     /**
      * Gets the default mapping file from classpath.
      */
-    public static URL defaultJSONLookupDB() {
-        return DomainLookupServer.class.getResource("domain_lookup_db.json");
+    public static URL defaultJSONLookupDB(final String domainMapping) {
+        return CommonUtils.getUrl(domainMapping);
     }
 
-    private static URL defaultPeerList() {
-        return DomainLookupServer.class.getResource("peers.json");
+    public static URL defaultPeerList(final String trustedPeersFilePath) {
+        return CommonUtils.getUrl(trustedPeersFilePath);
     }
 
     /**
      * Parses the JSON input file containing the list of hostName to ipAddress mappings.
      */
-    public static Map<String, Peer> loadPeers() {
+    public static Map<String, Peer> loadPeers(final String trustedPeersFilePath) {
         InputStream inputStream;
-        final URL path = defaultPeerList();
+        final URL path = defaultPeerList(trustedPeersFilePath);
         try {
             inputStream = path.openStream();
         } catch (IOException e) {
@@ -57,9 +58,9 @@ public class ServerUtils {
         return peers.hosts.stream().collect(Collectors.toMap(Peer::getName, Function.identity()));
     }
 
-    public static ServerOperationalConfig getServerOpConfig() {
+    public static ServerOperationalConfig getServerOpConfig(final String serverConfig) {
         InputStream inputStream;
-        final URL path = getServerOperationalConfig();
+        final URL path = getServerOperationalConfig(serverConfig);
         try {
             inputStream = path.openStream();
         } catch (IOException e) {
@@ -76,8 +77,8 @@ public class ServerUtils {
         return builder.build();
     }
 
-    private static URL getServerOperationalConfig() {
-        return DomainLookupServer.class.getResource("server.op.config");
+    private static URL getServerOperationalConfig(final String serverConfig) {
+        return CommonUtils.getUrl(serverConfig);
     }
 
     public static boolean isHostNameValid(final String hostName, final int permissableLength) {

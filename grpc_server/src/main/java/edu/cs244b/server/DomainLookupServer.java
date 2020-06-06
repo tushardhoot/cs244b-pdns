@@ -7,6 +7,7 @@ import edu.cs244b.common.DNSRecordP2P;
 import edu.cs244b.common.DomainLookupServiceGrpc;
 import edu.cs244b.common.Message;
 import edu.cs244b.common.P2PMessage;
+import edu.cs244b.mappings.DNSMappingStore;
 import edu.cs244b.mappings.JSONMappingStore;
 import edu.cs244b.mappings.LookupResult;
 import edu.cs244b.mappings.MappingStore;
@@ -32,20 +33,19 @@ public class DomainLookupServer {
     private final Server server;
     private final DomainLookupService domainLookupService;
 
-    public DomainLookupServer(int port) throws Exception {
-        this(port, new JSONMappingStore(ServerUtils.defaultJSONLookupDB()));
-    }
-
-    /** Create a DomainLookup server using serverBuilder as a base and lookup entries as data. */
-    public DomainLookupServer(int port, MappingStore mappingStore) throws Exception {
+    public DomainLookupServer(final int port,
+                              final boolean dnsBacked,
+                              final String serverConfigFile) throws Exception {
         this.port = port;
-        final ServerOperationalConfig serverOpConfig = ServerUtils.getServerOpConfig();
-        this.domainLookupService = new DomainLookupService(mappingStore, serverOpConfig);
-        server = NettyServerBuilder.forPort(port)
-                .sslContext(ServerUtils.getServerSSLContext(serverOpConfig))
+        final ServerOperationalConfig serverOpConfig = ServerUtils.getServerOpConfig(serverConfigFile);
+        this.domainLookupService = new DomainLookupService(dnsBacked, serverOpConfig);
+        final NettyServerBuilder serverBuilder = NettyServerBuilder.forPort(port)
                 .addService(domainLookupService)
-                .intercept(new TimeoutInterceptor())
-                .build();
+                .intercept(new TimeoutInterceptor());
+        if (serverOpConfig.getSecureConnection()) {
+            serverBuilder.sslContext(ServerUtils.getServerSSLContext(serverOpConfig));
+        }
+        this.server = serverBuilder.build();
     }
 
     /** Start serving requests. */
@@ -100,10 +100,12 @@ public class DomainLookupServer {
 
         private final DNSCache dnsCache;
 
-        DomainLookupService(final MappingStore mappingStore, final ServerOperationalConfig serverOpConfig) {
-            this.mappingStore = mappingStore;
+        DomainLookupService(final boolean dnsBacked,
+                            final ServerOperationalConfig serverOpConfig) {
+            this.peers = ServerUtils.loadPeers(serverOpConfig.getPeers());
+            this.mappingStore = dnsBacked ? new DNSMappingStore() :
+                    new JSONMappingStore(ServerUtils.defaultJSONLookupDB(serverOpConfig.getDomainMapping()));
             this.mappingStore.setup();
-            this.peers = ServerUtils.loadPeers();
 
             dnsExpiryTime = serverOpConfig.getDnsExpiryDays() * DateTimeConstants.MILLIS_PER_DAY;
             maxAllowedHops = Math.min(serverOpConfig.getMaxHopCount(), ServerUtils.MAX_HOP_ALLOWED);
