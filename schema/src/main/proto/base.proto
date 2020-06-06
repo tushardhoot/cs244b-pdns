@@ -18,14 +18,15 @@ message DomainLookupMapping {
 message ServerOperationalConfig {
     int32 dnsExpiryDays = 1;
     int32 maxHopCount = 2;
-    int32 dnsCacheCapacity = 3;
-    int32 permissibleHostNameLength = 4;
-    string dnsStateFileLocation = 5;
-    bool secureConnection = 6;
-    bool mutualTlsEnabled = 7;
-    string peers = 8;
-    string domainMapping = 9;
-    string sslCertBaseLocation = 10;
+    bool cacheEnabled = 3;
+    int32 dnsCacheCapacity = 4;
+    int32 permissibleHostNameLength = 5;
+    string dnsStateFileLocation = 6;
+    bool secureConnection = 7;
+    bool mutualTlsEnabled = 8;
+    string peers = 9;
+    string domainMapping = 10;
+    string sslCertBaseLocation = 11;
 }
 
 message DNSCacheProto {

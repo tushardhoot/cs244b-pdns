@@ -98,6 +98,7 @@ public class DomainLookupServer {
         private final int maxAllowedHostNameLength;
         private final String sslCertBaseDirectory;
 
+        private final boolean isCacheEnabled;
         private final DNSCache dnsCache;
 
         DomainLookupService(final boolean dnsBacked,
@@ -111,6 +112,7 @@ public class DomainLookupServer {
             maxAllowedHops = Math.min(serverOpConfig.getMaxHopCount(), ServerUtils.MAX_HOP_ALLOWED);
             maxAllowedHostNameLength = serverOpConfig.getPermissibleHostNameLength();
             sslCertBaseDirectory = serverOpConfig.getSslCertBaseLocation();
+            isCacheEnabled = serverOpConfig.getCacheEnabled();
             dnsCache = new DNSCache(serverOpConfig.getDnsCacheCapacity(), logger);
             dnsCache.load(serverOpConfig.getDnsStateFileLocation() + ServerUtils.DNS_STATE_SUFFIX);
         }
@@ -127,6 +129,7 @@ public class DomainLookupServer {
             maxAllowedHops = serverOpConfig.getMaxHopCount();
             maxAllowedHostNameLength = serverOpConfig.getPermissibleHostNameLength();
             sslCertBaseDirectory = serverOpConfig.getSslCertBaseLocation();
+            isCacheEnabled = true;
             dnsCache = new DNSCache(serverOpConfig.getDnsCacheCapacity(), logger);
             dnsCache.load(dnsStateFilePath);
         }
@@ -179,10 +182,12 @@ public class DomainLookupServer {
             }
 
             // check local dns cache for resolution - return if found
-            final DNSCache.DNSInfo dnsInfo = dnsCache.get(message.getHostName());
-            final DNSRecordP2P dnsRecord = buildP2PResponse(message.getHostName(), dnsInfo);
-            if (dnsRecord != null) {
-                return Pair.of(Status.OK, dnsRecord);
+            if (isCacheEnabled) {
+                final DNSCache.DNSInfo dnsInfo = dnsCache.get(message.getHostName());
+                final DNSRecordP2P dnsRecord = buildP2PResponse(message.getHostName(), dnsInfo);
+                if (dnsRecord != null) {
+                    return Pair.of(Status.OK, dnsRecord);
+                }
             }
 
             final LookupResult lookupResult = mappingStore.lookup(message.getHostName());
