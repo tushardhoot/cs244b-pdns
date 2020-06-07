@@ -70,7 +70,7 @@ public class DNSCache {
         }
 
         /* A nice way to do cleanup:
-         * Whenever cleanup limit is breached, iterate through all the entries once in ten thousand times
+         * Whenever cache limit is breached, iterate through all the entries once in ten thousand times
          * Iterating over all entries to clear expired entries which have piled up with time
          * Remove all those entries which have expired
          * Remove those which are about to expire (as iterating the loop can be an expensive operation every few mins)

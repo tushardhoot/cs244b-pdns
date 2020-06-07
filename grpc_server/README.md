@@ -52,6 +52,7 @@ Run the below command inside ***server*** & ***client*** directories in */var/cs
 - **dnsExpiryDays:** 7 *--> number of days before which a freshly fetched DNS info is valid*  
 - **maxHopCount:** 5 *--> max number of hops allowed for a p2p request originating from the server*  
 - **cacheEnabled:** true *--> if true, subsequent requests are served from cache if present*  
+- **cacheCleanupRarePercentage:** 0.01 *--> when `dnsCacheCapacity` is hit, 1 in 10000 times the whole dns cache is cleared of expired entries*  
 - **dnsCacheCapacity:** 1000000 *--> max number of records in cache*  
 - **permissibleHostNameLength:** 255 *--> host names greater than this are not resolved*  
 - **dnsStateFileLocation:** "/var/cs244b.p2p.dns/state" *--> directory where dns cache are written to disk for recovery in case of failure/restarts*  
