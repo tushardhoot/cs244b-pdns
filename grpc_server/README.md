@@ -35,7 +35,7 @@
 
 2) CREATE CERTICATE  
 Run the below command inside ***server*** & ***client*** directories in */var/cs244b.p2p.dns/ssl_certificates*  
-`sudo openssl req -newkey rsa:2048 -new -nodes -x509 -days 3650 -keyout key.pem -out cert.pem -config ~/git/cs244b/ssl_certs/ssl_req.conf -extensions 'v3_req'`  
+`sudo openssl req -newkey rsa:2048 -new -nodes -x509 -days 3650 -keyout key.pem -out cert.pem --config ~/git/cs244b/ssl_certs/ssl_req.conf -extensions 'v3_req'`  
 
 3) READ CERTIFICATE  
 `openssl x509 -noout -text -in cert.pem`  
