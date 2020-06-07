@@ -19,14 +19,15 @@ message ServerOperationalConfig {
     int32 dnsExpiryDays = 1;
     int32 maxHopCount = 2;
     bool cacheEnabled = 3;
-    int32 dnsCacheCapacity = 4;
-    int32 permissibleHostNameLength = 5;
-    string dnsStateFileLocation = 6;
-    bool secureConnection = 7;
-    bool mutualTlsEnabled = 8;
-    string peers = 9;
-    string domainMapping = 10;
-    string sslCertBaseLocation = 11;
+    double cacheCleanupRarePercentage = 4;
+    int32 dnsCacheCapacity = 5;
+    int32 permissibleHostNameLength = 6;
+    string dnsStateFileLocation = 7;
+    bool secureConnection = 8;
+    bool mutualTlsEnabled = 9;
+    string peers = 10;
+    string domainMapping = 11;
+    string sslCertBaseLocation = 12;
 }
 
 message DNSCacheProto {

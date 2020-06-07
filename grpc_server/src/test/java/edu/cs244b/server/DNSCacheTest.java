@@ -19,7 +19,7 @@ public class DNSCacheTest {
     @Test
     public void testBasic() throws UnknownHostException {
         long expiryTime = System.currentTimeMillis() + (5 * DateTimeConstants.MILLIS_PER_MINUTE);
-        final DNSCache dnsCache = new DNSCache(5, logger);
+        final DNSCache dnsCache = new DNSCache(5, 100, logger);
         dnsCache.put("facebook.com", "1.1.1.1", expiryTime);
         dnsCache.put("amazon.com", "1.1.1.2", expiryTime);
         dnsCache.put("google.com", "1.1.1.3", expiryTime);
