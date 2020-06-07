@@ -31,7 +31,7 @@
 	[alt_names]  
 	email = abc@xyz.com  
 	IP.1 = 127.0.0.1  
-	IP.2 = 3.133.102.2 ***\-\-\> Change it to public static IP of your server***  
+	IP.2 = 3.133.102.2 > Change it to public static IP of your server  
 
 2) CREATE CERTICATE  
 Run the below command inside ***server*** & ***client*** directories in */var/cs244b.p2p.dns/ssl_certificates*  
@@ -49,21 +49,21 @@ Run the below command inside ***server*** & ***client*** directories in */var/cs
 */var/cs244b.p2p.dns/domain\_lookup\_db\_`local`.json*  
 
 2) The below properties can be tweaked from the config file.  
-**dnsExpiryDays:** 7 *\-\-\> number of days before which a freshly fetched DNS info is valid*  
-**maxHopCount:** 5 *\-\-\> max number of hops allowed for a p2p request originating from the server*  
-**cacheEnabled:** true *\-\-\> if true, subsequent requests are served from cache if present*  
-**dnsCacheCapacity:** 1000000 *\-\-\> max number of records in cache*  
-**permissibleHostNameLength:** 255 *\-\-\> host names greater than this are not resolved*  
-**dnsStateFileLocation:** "/var/cs244b.p2p.dns/state" *\-\-\> directory where dns cache are written to disk for recovery in case of failure/restarts*  
-**secureConnection:** true *\-\-\> if true, client authenticates the server using TLS*  
-**mutualTlsEnabled:** true *\-\-\> if true, the server also authenticates the client*  
-**peers:** "/var/cs244b.p2p.dns/peers.json" *\-\-\> connection details (name:ip:port) for trusted peers*  
-**domainMapping:** "/var/cs244b.p2p.dns/domain_lookup_db.json" *\-\-\> domain lookup information of hostnames/sub domains - whether it directly resolves to an IP or delegates the resolution to one of its trusted contacts*  
-**sslCertBaseLocation:** "/var/cs244b.p2p.dns/ssl_certificates" *\-\-\> directory where all client, server, trusted contacts certificates are present. There are further 4 directories inside it.*  
-    **./server** - *pk (key.pem) and self-signed certificate (cert.pem) of the server*  
-    **./client** - *pk (key.pem) and self-signed certificate (cert.pem) of the local client*  
-    **./trusted_contacts/`<peer name>`/cert.pem** - *certificates of each trusted peers inside their respective directories*  
-    **./supported_clients_mutual_tls/`<client peer name>`/cert.pem** - *certificates of each client peers inside their respective directories - used in case of mutual TLS*  
+- **dnsExpiryDays:** 7 > number of days before which a freshly fetched DNS info is valid  
+- **maxHopCount:** 5 > max number of hops allowed for a p2p request originating from the server  
+- **cacheEnabled:** true > if true, subsequent requests are served from cache if present  
+- **dnsCacheCapacity:** 1000000 > max number of records in cache  
+- **permissibleHostNameLength:** 255 > host names greater than this are not resolved  
+- **dnsStateFileLocation:** "/var/cs244b.p2p.dns/state" > directory where dns cache are written to disk for recovery in case of failure/restarts  
+- **secureConnection:** true > if true, client authenticates the server using TLS  
+- **mutualTlsEnabled:** true > if true, the server also authenticates the client  
+- **peers:** "/var/cs244b.p2p.dns/peers.json" > connection details (name:ip:port) for trusted peers  
+- **domainMapping:** "/var/cs244b.p2p.dns/domain_lookup_db.json" > domain lookup information of hostnames/sub domains - whether it directly resolves to an IP or delegates the resolution to one of its trusted contacts  
+- **sslCertBaseLocation:** "/var/cs244b.p2p.dns/ssl_certificates" > directory where all client, server, trusted contacts certificates are present. There are further 4 directories inside it.  
+    - **./server** : >pk (key.pem) and self-signed certificate (cert.pem) of the server  
+    - **./client** : >pk (key.pem) and self-signed certificate (cert.pem) of the local client  
+    - **./trusted_contacts/`<peer name>`/cert.pem** : >certificates of each trusted peers inside their respective directories.  
+    - **./supported_clients_mutual_tls/`<client peer name>`/cert.pem** : >certificates of each client peers inside their respective directories - used in case of mutual TLS  
 
 3) Modify the ***peers_local.json*** & ***domain_lookup_db_local.json*** file as per your need.  
 
