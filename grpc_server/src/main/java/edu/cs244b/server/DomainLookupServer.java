@@ -113,7 +113,7 @@ public class DomainLookupServer {
             maxAllowedHostNameLength = serverOpConfig.getPermissibleHostNameLength();
             sslCertBaseDirectory = serverOpConfig.getSslCertBaseLocation();
             isCacheEnabled = serverOpConfig.getCacheEnabled();
-            dnsCache = new DNSCache(serverOpConfig.getDnsCacheCapacity(), logger);
+            dnsCache = new DNSCache(serverOpConfig.getDnsCacheCapacity(), serverOpConfig.getCacheCleanupRarePercentage(), logger);
             dnsCache.load(serverOpConfig.getDnsStateFileLocation() + ServerUtils.DNS_STATE_SUFFIX);
         }
 
@@ -130,7 +130,7 @@ public class DomainLookupServer {
             maxAllowedHostNameLength = serverOpConfig.getPermissibleHostNameLength();
             sslCertBaseDirectory = serverOpConfig.getSslCertBaseLocation();
             isCacheEnabled = true;
-            dnsCache = new DNSCache(serverOpConfig.getDnsCacheCapacity(), logger);
+            dnsCache = new DNSCache(serverOpConfig.getDnsCacheCapacity(), serverOpConfig.getCacheCleanupRarePercentage(), logger);
             dnsCache.load(dnsStateFilePath);
         }
 

@@ -16,12 +16,12 @@ public class DNSCache {
 
     private final LinkedHashMap<String, DNSInfo> cache;
     private final int capacity;
+    private final double cacheCleanupRarePercentage;
 
-    private static final double DNS_CACHE_CLEANUP_EXPIRED_ENTRIES_RARE_PCT = 0.01;
-
-    public DNSCache(final int capacity, final Logger logger) {
+    public DNSCache(final int capacity, final double cacheCleanupRarePercentage, final Logger logger) {
         this.logger = logger;
         this.capacity = capacity;
+        this.cacheCleanupRarePercentage = cacheCleanupRarePercentage;
         this.cache = new LinkedHashMap<>(1<<10, 0.75F, true);
     }
 
@@ -77,7 +77,7 @@ public class DNSCache {
          * If no entries are expired when iteration is over, remove the least used entry
          */
         try {
-            if (CommonUtils.rare(DNS_CACHE_CLEANUP_EXPIRED_ENTRIES_RARE_PCT)) {  //  1-of-10000
+            if (CommonUtils.rare(cacheCleanupRarePercentage)) {  //  1-of-10000
                 Iterator<Map.Entry<String, DNSInfo>> iterator = cache.entrySet().iterator();
                 // expire all those who fall in the next 10 min window
                 final long expiryTimeToConsider = System.currentTimeMillis() + (10 * DateTimeConstants.MILLIS_PER_MINUTE);
