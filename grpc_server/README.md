@@ -31,10 +31,10 @@ sudo mkdir -p /var/cs244b.p2p.dns/ssl_certificates/supported_clients_mutual_tls
 	[alt_names] 
 	email = cs244b@stanford.com 
 	IP.1 = 127.0.0.1 
-	IP.2 = 3.133.102.2 **_----> Change it to public static IP of your server_** 
+	IP.2 = 3.133.102.2 ***----> Change it to public static IP of your server*** 
 
 2) CREATE CERTICATE 
-Run the below command inside **_server_** & **_client_** directories in */var/cs244b.p2p.dns/ssl_certificates* 
+Run the below command inside ***server*** & ***client*** directories in */var/cs244b.p2p.dns/ssl_certificates* 
 *sudo openssl req -newkey rsa:2048 -new -nodes -x509 -days 3650 -keyout key.pem -out cert.pem -config ~/git/cs244b/ssl_certs/ssl_req.conf -extensions 'v3_req'* 
 
 3) READ CERTIFICATE 
@@ -44,9 +44,9 @@ Run the below command inside **_server_** & **_client_** directories in */var/cs
 **BACKEND SERVER DETAILS**
 --------------------------------------------------------------------------------------------------------------------------------
 1) Make a local copy of *server.op.config*, *peers.json* & *domain_lookup_db.json*  
-_/var/cs244b.p2p.dns/server**_local**.op.config_ 
-_/var/cs244b.p2p.dns/peers**_local**.json_ 
-_/var/cs244b.p2p.dns/domain_lookup_db**_local**.json_
+*/var/cs244b.p2p.dns/server**_local**.op.config* 
+*/var/cs244b.p2p.dns/peers**_local**.json* 
+*/var/cs244b.p2p.dns/domain_lookup_db**_local**.json*
 
 2) The below properties can be tweaked from the config file. 
 **dnsExpiryDays:** 7 *--> number of days before which a freshly fetched DNS info is valid 
@@ -65,9 +65,9 @@ _/var/cs244b.p2p.dns/domain_lookup_db**_local**.json_
     **./trusted_contacts/<peer name>/cert.pem** - *certificates of each trusted peers inside their respective directories* 
     **./supported_clients_mutual_tls/<client peer name>/cert.pem** - *certificates of each client peers inside their respective directories - used in case of mutual TLS* 
 
-2) Modify the **_peers_local.json_** & **_domain_lookup_db_local.json_** file as per your need 
+2) Modify the ***peers_local.json*** & ***domain_lookup_db_local.json*** file as per your need 
 
-3) Modify the **_server_local.op.config_** file to point to above _peers_local.json_ & _domain_lookup_db_local.json_ files
+3) Modify the ***server_local.op.config*** file to point to above *peers_local.json* & *domain_lookup_db_local.json* files
 
 4) Run the java server using the local copy of the server config file 
 *java -jar ~/git/cs244b/grpc_server/target/grpc_server-0.001-SNAPSHOT-jar-with-dependencies.jar -port 9000 -config /var/cs244b.p2p.dns/server_local.op.config &* 
