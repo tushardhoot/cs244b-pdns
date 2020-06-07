@@ -44,4 +44,8 @@ public class CommonUtils {
         }
         return url;
     }
+
+    public static boolean rare(final double rarePercent) {
+        return (Math.random() * 100 < rarePercent);
+    }
 }

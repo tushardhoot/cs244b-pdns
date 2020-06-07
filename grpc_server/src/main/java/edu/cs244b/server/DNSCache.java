@@ -17,6 +17,8 @@ public class DNSCache {
     private final LinkedHashMap<String, DNSInfo> cache;
     private final int capacity;
 
+    private static final double DNS_CACHE_CLEANUP_EXPIRED_ENTRIES_RARE_PCT = 0.01;
+
     public DNSCache(final int capacity, final Logger logger) {
         this.logger = logger;
         this.capacity = capacity;
@@ -68,20 +70,22 @@ public class DNSCache {
         }
 
         /* A nice way to do cleanup:
-         * Whenever cleanup limit is breached, iterate through all the entries
-         * Iterating over all entries will clear expired entries which have piled up with time
+         * Whenever cleanup limit is breached, iterate through all the entries once in ten thousand times
+         * Iterating over all entries to clear expired entries which have piled up with time
          * Remove all those entries which have expired
          * Remove those which are about to expire (as iterating the loop can be an expensive operation every few mins)
          * If no entries are expired when iteration is over, remove the least used entry
          */
         try {
-            Iterator<Map.Entry<String, DNSInfo>> iterator = cache.entrySet().iterator();
-            // expire all those who fall in the next 10 min window
-            final long expiryTimeToConsider = System.currentTimeMillis() + (10 * DateTimeConstants.MILLIS_PER_MINUTE);
-            while (iterator.hasNext()) {
-                final Map.Entry<String, DNSInfo> entry = iterator.next();
-                if (candidateToBeRemoved(entry.getValue(), expiryTimeToConsider)) {
-                    iterator.remove();
+            if (CommonUtils.rare(DNS_CACHE_CLEANUP_EXPIRED_ENTRIES_RARE_PCT)) {  //  1-of-10000
+                Iterator<Map.Entry<String, DNSInfo>> iterator = cache.entrySet().iterator();
+                // expire all those who fall in the next 10 min window
+                final long expiryTimeToConsider = System.currentTimeMillis() + (10 * DateTimeConstants.MILLIS_PER_MINUTE);
+                while (iterator.hasNext()) {
+                    final Map.Entry<String, DNSInfo> entry = iterator.next();
+                    if (candidateToBeRemoved(entry.getValue(), expiryTimeToConsider)) {
+                        iterator.remove();
+                    }
                 }
             }
 
