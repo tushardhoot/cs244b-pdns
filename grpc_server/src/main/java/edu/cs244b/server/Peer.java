@@ -2,8 +2,12 @@ package edu.cs244b.server;
 
 import edu.cs244b.common.DomainLookupServiceGrpc;
 import edu.cs244b.common.DomainLookupServiceGrpc.DomainLookupServiceBlockingStub;
+import io.grpc.netty.shaded.io.grpc.netty.GrpcSslContexts;
 import io.grpc.netty.shaded.io.grpc.netty.NegotiationType;
 import io.grpc.netty.shaded.io.grpc.netty.NettyChannelBuilder;
+import io.grpc.netty.shaded.io.netty.handler.ssl.SslContext;
+
+import java.security.cert.X509Certificate;
 
 
 public class Peer {
@@ -36,12 +40,30 @@ public class Peer {
         return port;
     }
 
+    private static SslContext getClientSSLContext(final String certBaseDirectory, X509Certificate serverCert) throws Exception {
+        return GrpcSslContexts.forClient()
+                // trustManager - used for verifying server the server's certificate
+                .trustManager(serverCert)
+                // keyManager - cert chain & key for client's certificate
+                .keyManager(CertificateReader.getCertificateChain(certBaseDirectory), CertificateReader.getKey(certBaseDirectory))
+                .build();
+    }
+
     DomainLookupServiceBlockingStub getStub(final String certBaseDirectory, final String peerName) throws Exception {
         if (stub == null) {
-            stub = DomainLookupServiceGrpc.newBlockingStub(NettyChannelBuilder.forAddress(ip_address, port)
-                    //.overrideAuthority("3.133.102.2")
-                    .negotiationType(NegotiationType.TLS)
-                    .sslContext(ServerUtils.getClientSSLContext(certBaseDirectory, peerName)).build());
+            X509Certificate serverCert = CertificateReader.getServerCertificateAuthority(certBaseDirectory, peerName);
+            NettyChannelBuilder channelBuilder = NettyChannelBuilder.forAddress(ip_address, port);
+
+            if (serverCert != null) {
+                channelBuilder
+                        .negotiationType(NegotiationType.TLS)
+                        .sslContext(getClientSSLContext(certBaseDirectory, serverCert));
+            } else {
+                channelBuilder
+                        .usePlaintext();
+            }
+
+            stub = DomainLookupServiceGrpc.newBlockingStub(channelBuilder.build());
         }
 
         return stub;

@@ -95,15 +95,6 @@ public class ServerUtils {
         return false;
     }
 
-    public static SslContext getClientSSLContext(final String certBaseDirectory, final String peerName) throws Exception {
-        return GrpcSslContexts.forClient()
-                // trustManager - used for verifying server the server's certificate
-                .trustManager(CertificateReader.getServerCertificateAuthority(certBaseDirectory, peerName))
-                // keyManager - cert chain & key for client's certificate
-                .keyManager(CertificateReader.getCertificateChain(certBaseDirectory), CertificateReader.getKey(certBaseDirectory))
-                .build();
-    }
-
     public static SslContext getServerSSLContext(final ServerOperationalConfig serverOpConfig) throws Exception {
         String certBaseDir = serverOpConfig.getSslCertBaseLocation();
         SslContextBuilder builder = GrpcSslContexts.forServer(CertificateReader.getCertificateChain(certBaseDir), CertificateReader.getKey(certBaseDir));
