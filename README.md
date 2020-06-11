@@ -2,9 +2,9 @@
 
 The pDNS implementation can be dividing into two main sections, the client and the server. 
 
-The client portion can be explored in `client/`, and contains a readme explaining the client.
-The server portion can be seen in `grpc_server/` and contains a readme explaining the server.
-The protobuf / gRPC service definition are under `schema/`.
+* The client portion can be explored in `client/`, and contains a readme explaining the client.
+* The server portion can be seen in `grpc_server/` and contains a readme explaining the server.
+* The protobuf / gRPC service definition are under `schema/`.
 
 ## Certs
 We've included an `ssl_cert` folder here, which we used as a simple way to sync certificates among our deployed servers.
